@@ -13,29 +13,12 @@ export class CodeEditorComponent implements OnInit {
 
   busca_dados() {
     let cliente = ''
-    let empresa = '01';
-    let filial = '01';
-    let URL = 'http://192.168.60.43:8084/rest';
+    let URL = '';
     let text_token = '';
     let usuario = '';
     let senha = '';
     let script = this.codeEditor;
     let ERP = sessionStorage.getItem("ProCompany") == null ? false : true;
-
-    switch (cliente) {
-      case 'polimaquinas': {
-        usuario = 'admin';
-        senha = 'admpol13';
-        URL = 'http://172.30.50.50:8103/rest';
-        break;
-      }
-      case 'reval': {
-        usuario = 'emerson.batista';
-        senha = 'lda03';
-        URL = 'http://192.168.60.43:8084/rest';
-        break;
-      }
-    }
 
     if (!ERP) {
       //alert('rotina chamada fora do Protheus');

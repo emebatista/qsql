@@ -36,6 +36,8 @@ yarn-error.log
 /libpeerconnection.log
 testem.log
 /typings
+gera_app.sh
+testes.ts
 
 # System files
 .DS_Store
