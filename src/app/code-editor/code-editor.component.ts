@@ -17,6 +17,8 @@ export class CodeEditorComponent implements OnInit {
     let text_token = '';
     let usuario = '';
     let senha = '';
+    let empresa = '';
+    let filial = '';
     let script = this.codeEditor;
     let ERP = sessionStorage.getItem("ProCompany") == null ? false : true;
 
