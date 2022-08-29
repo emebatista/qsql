@@ -1,0 +1,37 @@
+
+#resultados {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: small;
+    border-collapse: collapse;
+    width: 90%;
+    height: 90%;
+}
+
+#tabela {
+    width: 50%;
+    height: 90%;
+}
+
+#resultados td,
+#resultados th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#resultados tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+#resultados tr:hover {
+    background-color: #ddd;
+}
+
+#resultados th,
+thead {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #39739d;
+    color: white;
+}
+
