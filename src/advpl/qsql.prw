@@ -3,18 +3,17 @@
 #include "totvs.ch"
 #include "vkey.ch"
 #include "colors.ch"
-#INCLUDE 'FILEIO.CH'
+#INCLUDE "FILEIO.CH"
 #INCLUDE "FWMBROWSE.CH"
 #INCLUDE "FWMVCDEF.CH"
-#Include 'RestFul.CH'
-
+#Include "RestFul.CH"
 #DEFINE NUM_INIS 25
 #DEFINE STEP_BUTTON 8.9
 
 #DEFINE CRLF Chr(13)+Chr(10)
 
 /*/{Protheus.doc} QSQL
-Função para abrir executar consultas SQL no banco de dados
+Fun��o para abrir executar consultas SQL no banco de dados
 @author Emerson D Batista
 @since 11/12/2017
 @version 1.0
@@ -24,6 +23,10 @@ User Function AfterLogin()
 	SetKey( K_SH_F11, { || u_CFGQSQL() } )
 	SetKey( VK_F11  , { || u_CFGQSQL() } )
 Return nil
+
+User Function QSQL(cFraseAuto,_aPosicoes,_oJanela)
+	u_CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
+Return nil 
 
 User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 	Local cRPO2
@@ -46,6 +49,12 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 	Private pl_Trace 	:= .F.
 	Private cBarra      := IIF(GetRemoteType()== 2,"/","\")
 	Private cListPerm
+	//	SET AUTOPEN OFF
+	//	SET DELETED OFF
+	//	SET SOFTSEEK ON
+	//	SET DATE BRITISH
+	//	SET CENTURY ON
+	//	SET EPOCH TO 1950
 
 	If Select("SX2")=0
 		RPCCLEARENV()
@@ -62,7 +71,9 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 
 	If ! IsInCallStack("U_SqlFile")
 		If !(FWIsAdmin( __cUserID ) ) .AND. GetNewPar("MV_X_RSQL",.F.)
+//			MsgStop(' O usuario ' + __cUserID + ' nao pertence ao grupo de administradores!')
 			lAdmin := .F.
+//			Return
 		Else
 			lAdmin := .T.
 			IF GetNewPar("MV_X_QSQL1",.F.) .AND. MsgNoYes("Abrir SqlFile?")
@@ -116,12 +127,10 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 		DEFINE FONT oFont2 NAME "Menlo, Monaco, 'Courier New', monospace" SIZE 0, -12
 		oDlg1:lEscClose     := .F. //Nao permite sair ao se pressionar a tecla ESC.
 
-		oTMultiget2 := TMultiget():Create(oDlg1,{|u| if(Pcount()>0,_cQueryTxt:=u,_cQueryTxt)},001,001,520,150,oFont,,,,,.T.,,,,,,,,,,,.T.)
-
+		oTMultiget2 := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,_cQueryTxt:=u,_cQueryTxt)},001,001,520,150,oFont,,,,,.T.,,,,,,,,,,,.T.)
 		@ 010 	   ,525 SAY    "____________________"   OF oDlg1 pixel color CLR_HBLUE
 
-		@ 151,010 SAY oSayT     VAR cSayT     OF oDlg1 pixel color CLR_HBLUE
-
+		@ 151,10 SAY oSayT VAR cSayT OF oDlg1 pixel color CLR_HBLUE
 
 		If Empty(cFraseAuto) .and. File(c_Pth)
 			nHandle := FT_FUse(AllTrim(c_Pth))
@@ -178,13 +187,16 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 		Activate Dialog oDlg1 centered
 		SetKey( VK_F5, Nil )
 		SetKey( 75,Nil)
+
 	Else
+
 		If Empty(_aPosicoes)
 			fRun()
 			fExport()
 		Else
 			fRun(_aPosicoes,_oJanela)
 		EndIF
+
 	EndIf
 
 Return
@@ -198,7 +210,7 @@ Static Function Trace()
 
 	If ! pl_Trace
 		if TCSqlReplay(1, @cMessage) == .F.
-			Aviso("Atencao","Nao existe a implementaÃƒÂ§ÃƒÂ£o")
+			Aviso("Atencao","Nao existe a implementacÃ£o")
 			Return
 		endif
 
@@ -224,7 +236,7 @@ Static Function Trace()
 
 		cMessage := ""
 		if TCSqlReplay(4, @cMessage) == .T.
-			Aviso("Atencao","Trace foi iniciado os processos ficarÃƒÂ£o mais lentos")
+			Aviso("Atencao","Trace foi iniciado os processos ficarÃ£o mais lentos")
 		endif
 		pl_Trace := .T.
 		btnTrace:cTitle := "End Trace"
@@ -266,6 +278,8 @@ Static Function Trace()
 
 Return
 
+
+
 Static Function fDicio()
 	//teste svn
 	Static    cArqDic  := "SX3"
@@ -301,7 +315,7 @@ Static Function fDicio()
 			Break
 		EndIf
 
-		If ! ( cArqDic $ "SX1,SX2,SX3,SX4,SX5,SX6,SIX,SXB" )
+		If ! ( cArqDic $ "SX1,SX2,SX3,SX4,SX5,SX6,SX7,SIX,SXB,SXK" )
 
 			aSelCampos := SelCampos(cArqDic)
 
@@ -318,7 +332,7 @@ Static Function fDicio()
 
 			If ! Empty(cFiltro)
 
-				If MsgYesNo("Pre-Visualiza dados?")
+				If MsgYesNo("Pre-Visualiza dados?","Confirma")
 					MsAguarde({|| DbSetfilter({|| &(cFiltro)}, cFiltro) },"Filtrando","Aguarde...")
 					fShowTrab(cArqDic,aSelCampos)
 				Else
@@ -417,7 +431,7 @@ User Function fVldDic()
 	EndIf
 
 	If !lReturn
-		FwAlertError("Tabela Bloqueada para Consulta.","Atenção")
+		FwAlertError("Tabela Bloqueada para Consulta.","Aten��o")
 	ENDIF
 
 Return lReturn
@@ -460,11 +474,11 @@ Static Function fRun(_aPosicoes,_oJanela)
 	If Empty(_aPosicoes)
 		MemoWrite(c_Pth,_cQueryTxt)
 		cBkpSql := _cQueryTxt
-		_cQueryTxt := Ltrim(StrTran(_cQueryTxt,CRLF,CRLF+"Â§$@"))
+		_cQueryTxt := Ltrim(StrTran(_cQueryTxt,CRLF,CRLF+"§$@"))
 		a_Qry := StrToArray(_cQueryTxt,CRLF)
 		n_PsBlE := Len(a_Qry)
 		For _i := 1 to Len(a_Qry)
-			a_Qry[_i] := StrTran(a_Qry[_i],"Â§$@","")
+			a_Qry[_i] := StrTran(a_Qry[_i],"§$@","")
 			if n_TPos < n_Pos
 				If Empty(a_Qry[_i])
 					n_PsBlB := _i
@@ -506,15 +520,18 @@ Static Function fRun(_aPosicoes,_oJanela)
 	_cOper  := {"DROP","TRUNCATE","INSERT","UPDATE","DELETE"}
 	lSelect := .T.
 
-	For _i:=1 to Len(_cOper)
-		If AT(_cOper[_i],UPPER(_cQueryTxt))>0
-			APMsgAlert("Alteracao de dados NAO permitida!",cTitulo)
-			Return
-		Endif
-	Next
-	//- ValidaÃ§Ã£o adicional pra gente nÃ£o cair nas prÃ³prias armadilhas de dar select/update sem where
+	If !lAdmin 
+		For _i:=1 to Len(_cOper)
+			If AT(_cOper[_i],UPPER(_cQueryTxt))>0
+				APMsgAlert("Alteracao de dados NAO permitida!",cTitulo)
+				Return
+			Endif
+		Next
+	EndIf 
+	
+	//- Validação adicional pra gente não cair nas próprias armadilhas de dar select/update sem where
 	if AT("TOP",UPPER(_cQueryTxt))==0 .and. AT("WHERE",UPPER(_cQueryTxt))==0 .and. AT("DISTINCT",UPPER(_cQueryTxt))==0
-		if !MsgYesNo("Deseja realizar esta operacao sem filtros?","Confirme")
+		if !MsgYesNo("Deseja realizar esta operacao sem filtros?","Confirma")
 			Return
 		endif
 	endif
@@ -563,7 +580,7 @@ Static Function fRun(_aPosicoes,_oJanela)
 			oResult := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,_cRet:=u,_cRet)},160,001,588,170,oFont2,,,,,.T.,,,,,,,,,,,.T.)
 			_cRet = TCSQLERROR()
 			_cQueryTxt := cBkpSql
-		EndIf
+		EndIf 
 
 		If !Select("WORK1")
 			//_cQueryTxt := cBkpSql
@@ -613,8 +630,6 @@ Static Function fRun(_aPosicoes,_oJanela)
 
 		Next
 		_cQueryTxt := cBkpSql
-
-		fNovoBrowse(_cQueryTXT,aStruct)
 
 		oTempTable := FWTemporaryTable():New(_cMyAlias,aStruct)
 		oTempTable:Create()
@@ -760,7 +775,7 @@ Static Function Save()
 
 Return nil
 
-Static FUNCTION LstCmp()
+Static Function LstCmp()
 	Local n_Pos := oTMultiget2:nPos
 
 	If Len(a_Cmps) <> 0
@@ -781,7 +796,7 @@ RETURN
 Static Function Terminal()
 	Local oError := ErrorBlock({|e| MsgAlert("Mensagem de Erro: " +chr(10)+ e:Description, "ERRO")})
 
-	IF !MsgYesNo("Confirma Execblock?")
+	IF !MsgYesNo("Confirma Execblock?","Confirma")
 		Return nil
 	EndIf
 
@@ -803,7 +818,7 @@ Return .F.
 Static Function fPowerShell()
 	Local oError := ErrorBlock({|e| MsgAlert("Mensagem de Erro: " +chr(10)+ e:Description, "ERRO")})
 
-	IF !MsgYesNo("Confirma Execucao?")
+	IF !MsgYesNo("Confirma Execucao?","Confirma")
 		Return nil
 	EndIf
 
@@ -819,11 +834,13 @@ Static Function fPowerShell()
 			IF lOk
 				MsgInfo("Executado com sucesso!")
 			Else
-				Alert("Erro na ExecuÃƒÂ§ÃƒÂ£o")
+				Alert("Erro na ExecucÃ£o")
 			EndIf
 
 			Return .T.
+		
 		End Sequence
+
 	EndIf
 
 	ErrorBlock(oError)
@@ -867,7 +884,7 @@ Static function ShwHst(nPar)
 	Local nHandle
 	Local c_Aux := ""
 
-	If nPar == 1 .AND. MsgYesNo("Limpa Historico?")
+	If nPar == 1 .AND. MsgYesNo("Limpa Historico?","Confirma")
 		fErase(AllTrim(c_Pth))
 		Alert("Historico excluido! "+c_Hst)
 		Return Nil
@@ -989,6 +1006,16 @@ User Function MudaAmb()
 
 				FWMsgRun(,{|| lOk := WaitRunSrv( xComando , .T. , "C:\" )  },"Alterando SourcePath.","Aguarde "+AllTrim(aResp[k]))
 
+				/*
+				If !WritePProString(cAmbiente, 'SourcePath', cRPONew, cArqIni)
+				MsgInfo("Falha ao Atualizar "+cArqIni)
+				EndIf
+
+				If GetPvProfString(cAmbiente, "SourcePath", "NaoAchou", cArqIni) <> cRPONew
+				MsgInfo("Falhou em  "+cArqIni)
+				EndIf
+				*/
+
 				cLog += cArqIni + chr(10)+chr(13)
 
 			EndIf
@@ -1045,7 +1072,7 @@ User Function Promove()
 		IF lOk
 			MsgInfo("Executado com sucesso!")
 		Else
-			Alert("Erro na ExecuÃƒÂ§ÃƒÂ£o")
+			Alert("Erro na Execucao")
 		EndIf
 	EndIf
 
@@ -1085,7 +1112,7 @@ Static Function fCopiar()
 	If lResult
 		MsgInfo("Executado Com Sucesso!")
 	Else
-		Alert("Falha de ExecuÃƒÂ§ÃƒÂ£o!")
+		Alert("Falha de Execucao!")
 	EndIF
 
 Return nil
@@ -1153,7 +1180,7 @@ Static Function fShowTrab(_cAlias,_aCampos)
 Return nil
 
 // --------------------------------------------------------------------------------
-// Executada a partir da Funcao lEditCol(MsGetDados), estÃƒÂ¡ Funcao permite a edicao
+// Executada a partir da Funcao lEditCol(MsGetDados), estÃ¡ Funcao permite a edicao
 // do campos no Grid
 Static Function fEditCel(oBrowse,nCol,lReadOnly,aStruct)
 	Local oDlg
@@ -1313,25 +1340,25 @@ Return
 // Mostra uma tela de help com as funcionalidades
 static function fHelp()
 	MSGInfo(/*"<h1>Help QSQL</h1>" +*/;
-		"<h2>Teclas rÃƒÂ¡pidas do QSQL</h2>" +;
+		"<h2>Teclas rapidas do QSQL</h2>" +;
 		"<b>F5:</b> Executa o comando SQL." +;
 		"<br><b>CTRL + seta para baixo:</b> Abre a lista de campos." +;
-		"<h2>FunÃƒÂ§ÃƒÂµes (botÃƒÂµes) do QSQL</h2>" +;
+		"<h2>Funcoes (botoes) do QSQL</h2>" +;
 		"<b>Executa:</b> Executa o comando SQL." +;
 		"<br><b>Exporta Dados:</b> Exporta o resultado da consulta no formato XML ou CSV (pode ser importado no Excel)." +;
-		"<br><b>Abrir:</b> Abre qualquer arquivo para edicao (local ou remoto). Util para editar arquivos de menus, alÃƒÂ©m de scripts SQL." +;
-		"<br><b>Salvar:</b> Salva o texto que estÃƒÂ¡ na tela em um arquivo. Pode ser qualquer extensÃƒÂ£o, inclusive menus." +;
-		"<br><b>Exec. Formula:</b> Executa uma ou mais user functions ou scripts em ADVPL, em sequencia, separados por vÃƒÂ­gula(,)." +;
+		"<br><b>Abrir:</b> Abre qualquer arquivo para edicao (local ou remoto). Util para editar arquivos de menus, alÃ©m de scripts SQL." +;
+		"<br><b>Salvar:</b> Salva o texto que esta' na tela em um arquivo. Pode ser qualquer extensÃ£o, inclusive menus." +;
+		"<br><b>Exec. Formula:</b> Executa uma ou mais user functions ou scripts em ADVPL, em sequencia, separados por vÃ­gula(,)." +;
 		"<br><b>Abrir Tabela:</b> Permite editar (inc./alt./exc./recuperar) das linhas (registros) de uma tabela aberta (SX ou DB)." +;
 		"<br><b>Historico:</b> Carrega o Historico de comandos." +;
 		"<br><b>Limpa Hist.:</b> Limpar o Historico, caso necessario." +;
-		"<br><b>Mudar RPO:</b> Muda o caminho do RPO no .ini (appserver.ini), permitindo mudanÃƒÂ§a a quente. Apenas em Windows." +;
-		"<br><b>Copia RPO:</b> Faz uma copia do RPO para outra pasta, facilitando a criacao de copias de seguranÃƒÂ§a." +;
+		"<br><b>Mudar RPO:</b> Muda o caminho do RPO no .ini (appserver.ini), permitindo mudanca a quente. Apenas em Windows." +;
+		"<br><b>Copia RPO:</b> Faz uma copia do RPO para outra pasta, facilitando a criacao de copias de seguranca." +;
 		"<br><b>Comando no Srv.:</b> Executa um comando no servidor. Exemplo: reiniciar TSS, executar .BAT, etc." +;
-		"<br><b>Copia Arquvos:</b> Copia arquivos da pasta local para o servidor ou vice versa. Exemplo: copia de patches ou substituiÃƒÂ§ÃƒÂ£o de menu." +;
-		"<br><b>Gera Fonte TReport:</b> Com base na Query carregada, abre uma tela de parametros com dados para geracao de codigo em ADVPL do relatÃƒÂ³rio correspondente no objeto TReport." +;
+		"<br><b>Copia Arquvos:</b> Copia arquivos da pasta local para o servidor ou vice versa. Exemplo: copia de patches ou substituicao de menu." +;
+		"<br><b>Gera Fonte TReport:</b> Com base na Query carregada, abre uma tela de parametros com dados para geracao de codigo em ADVPL do relatorio correspondente no objeto TReport." +;
 		"<br><b>Help:</b> Mostra esta tela de help." +;
-		"<br><b>Sair:</b> Fecha este utilitÃƒÂ¡rio." +;
+		"<br><b>Sair:</b> Fecha este utilitario." +;
 		"";
 		)
 return
@@ -1350,17 +1377,17 @@ User function SqlFile()
 	Endif
 	//
 	//6 - File
-	//[2] : DescriÃƒÂ§ÃƒÂ£o
+	//[2] : DescricÃ£o
 	//[3] : String contendo o inicializador do campo
 	//[4] : String contendo a Picture do campo
 	//[5] : String contendo a validacao
 	//[6] : String contendo a validacao When
 	//[7] : Tamanho do MsGet
-	//[8] : Flag .T./.F. ParÃƒÂ¢metro ObrigatÃƒÂ³rio ?
+	//[8] : Flag .T./.F. Parametro Obrigatorio ?
 	//[9] : Texto contendo os tipos de arquivo
 	//Ex.: &quot;Arquivos .CSV |*.CSV&quot;
-		//[10]: DiretÃƒÂ³rio inicial do CGETFILE()
-	//[11]: ParÃƒÂ¢metros do CGETFILE()
+		//[10]: Diretorio inicial do CGETFILE()
+	//[11]: Parametros do CGETFILE()
 
 	If GetRemoteType() = 2
 		aAdd( aPergs ,{6,"Arquivo"	,	aRet[1],"",'.T.','.F.',80,.T.,"Arquivos .TXT |*.TXT","SERVIDOR/sqlfile/",4})
@@ -1446,7 +1473,7 @@ User Function GeraTReport()
 	Local cPerg        := "QSQL01" // <<CPERG_RELATORIO>>
 	Local cTituloRel   := "Consulta Generica                                      " // <<TITULO_RELATORIO>>
 	Local aCabGrp      := Pad("",50) //<<CAB_GRUPO>>  Campos precisam vir na query. Se nao tiver agrupamento, passar vazio
-	Local aCabGrpTxt   := Pad("",50) // <<CAB_GRUPO_TXT>> // legendas das sessao de cabeÃƒÂ§alho
+	Local aCabGrpTxt   := Pad("",50) // <<CAB_GRUPO_TXT>> // legendas das sessao de cabecalho
 	Local aOrdem       := Pad("",50) // <<AORDEM>> // Campos precisam vir na query
 	Local aOrdemTxt    := Pad("",50)  // <<AORDEM_TXT legendas das ordens
 	Local aGerarTotais := Pad("",50) // <<AGERAR_TOTAIS>>
@@ -1459,7 +1486,7 @@ User Function GeraTReport()
 	aPrompt := {}
 	AADD( aPrompt ,{1,"Nome Funcao"		      , cNomeFunc			, "@!",  , , '.T.', Len(cNomeFunc)*3, .T.})
 	AADD( aPrompt ,{1,"Nome Relatorio"		  , cNomeRelat		, "@!",  , , '.T.', Len(cNomeRelat)*2, .T.})
-	AADD( aPrompt ,{1,"TÃƒÂ­tulo RelatÃƒÂ³rio"	  , cTituloRel	,     ,  , , '.T.', Len(cTituloRel)*2, .T.})
+	AADD( aPrompt ,{1,"TÃ­tulo Relatorio"	  , cTituloRel	,     ,  , , '.T.', Len(cTituloRel)*2, .T.})
 	AADD( aPrompt ,{1,"Perguntas "			  , cPerg				, "@!",  , , '.T.', Len(cPerg)*2, .F.})
 	AADD( aPrompt ,{1,"Quebra de Agrupamento ", aCabGrp		, "@!",  , , '.T.', Len(aCabGrp)*2, .F.})
 	AADD( aPrompt ,{1,"Legendas da Quebra"	  , aCabGrpTxt	, ,  , , '.T.', Len(aCabGrpTxt)*2, .F.})
@@ -1499,17 +1526,17 @@ User Function GeraTReport()
 	#DEFINE  LIM_QUEBRAS 4
 /*
 _____________________________________________________________________________
-Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦+-----------------------------------------------------------------------+Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦Ã‚Â¦ Funcao    Ã‚Â¦ <<NOME_FUNC>>  Ã‚Â¦ Autor Ã‚Â¦ <<AUTOR>>      Ã‚Â¦ Data Ã‚Â¦ <<DATA>>  Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦Ã‚Â¦           Ã‚Â¦           Ã‚Â¦       Ã‚Â¦                     Ã‚Â¦      Ã‚Â¦           Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦+-----------+-----------------------------------------------------------+Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦Ã‚Â¦ DescriÃƒÂ§ÃƒÂ£o Ã‚Â¦ <<TITULO_RELATORIO>>                                   Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦+-----------+-----------------------------------------------------------+Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦Ã‚Â¦ Uso       Ã‚Â¦ <<CLIENTE>>                                               Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦+-----------------------------------------------------------------------+Ã‚Â¦Ã‚Â¦
-Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦Ã‚Â¦
-Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯Ã‚Â¯
+Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦
+Â¦Â¦+-----------------------------------------------------------------------+Â¦Â¦
+Â¦Â¦Â¦ Funcao    Â¦ <<NOME_FUNC>>  Â¦ Autor Â¦ <<AUTOR>>      Â¦ Data Â¦ <<DATA>>  Â¦Â¦
+Â¦Â¦Â¦           Â¦           Â¦       Â¦                     Â¦      Â¦           Â¦Â¦
+Â¦Â¦+-----------+-----------------------------------------------------------+Â¦Â¦
+Â¦Â¦Â¦ DescricÃ£o Â¦ <<TITULO_RELATORIO>>                                   Â¦Â¦
+Â¦Â¦+-----------+-----------------------------------------------------------+Â¦Â¦
+Â¦Â¦Â¦ Uso       Â¦ <<CLIENTE>>                                               Â¦Â¦
+Â¦Â¦+-----------------------------------------------------------------------+Â¦Â¦
+Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦Â¦
+Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯Â¯
 */
 
 /**************************************************************************/
@@ -1521,7 +1548,7 @@ User Function <<NOME_FUNC>>()
 	Private cPerg           := '<<CPERG>>'
 	Private cTituloRel      := '<<TITULO_RELATORIO>>'
 	Private aCabGrp         := <<CAB_1GRUPO>> // Campos precisam vir na query. Se nao tiver agrupamento, passar vazio
-	Private aCabGrpTxt      := <<CAB_2GRUPO_TXT>> // // legendas das sessao de cabeÃƒÂ§alho
+	Private aCabGrpTxt      := <<CAB_2GRUPO_TXT>> // // legendas das sessao de cabecalho
 	Private aOrdem          := <<AORDENS>>   // Campos precisam vir na query
 	Private aOrdemTxt       := <<AORDEM_TXT>>  // legendas das ordens
 	Private aGerarTotais    := <<AGERAR_TOTAIS>>
@@ -1571,12 +1598,12 @@ Static Function ReportDef()
 
 	oReport:lHeaderVisible := lImprimeCabecalho
 	oReport:lFooterVisible := lImprimeRodape
-//oReport:SetColSpace(2,.T.)//Cria o espaÃƒÂ§amento entre as colunas do relatÃƒÂ³rio
+//oReport:SetColSpace(2,.T.)//Cria o espacamento entre as colunas do relatorio
 
 //-- Section de Informacoes
 	If lTemAgrupamento
 		DEFINE SECTION oSecaoCabecalho OF oReport ORDERS aOrd TITLE cTitulo PAGE BREAK
-		oSecaoCabecalho:SetPageBreak(.F.)   // p/ Nao quebrar a sessÃƒÂ£o por pagina na impressÃƒÂ£o do cabeÃƒÂ§alho
+		oSecaoCabecalho:SetPageBreak(.F.)   // p/ Nao quebrar a sessÃ£o por pagina na impressÃ£o do cabecalho
 	EndIf
 
 	For nCabs := 1 to Len(aCabGrp)
@@ -1585,7 +1612,7 @@ Static Function ReportDef()
 
 //-- Section de Informacoes
 	DEFINE SECTION oSecaoListagem OF oReport ORDERS aOrd TITLE cTitulo PAGE BREAK
-	oSecaoListagem:SetPageBreak(.F.)   // p/ Nao quebrar a sessÃƒÂ£o por pagina na impressÃƒÂ£o do cabeÃƒÂ§alho
+	oSecaoListagem:SetPageBreak(.F.)   // p/ Nao quebrar a sessÃ£o por pagina na impressÃ£o do cabecalho
 
 	// chama a rotina para popular dicionario e informa os campos a ignorar ,
 	// pois sao campos do cabecalho na sessao1
@@ -1593,7 +1620,7 @@ Static Function ReportDef()
 		Return NIL
 	EndIf
 
-	oSecaoListagem:SetTotalInLine(.F.) // imprime o totalizador no final de cada sessÃƒÂ£o
+	oSecaoListagem:SetTotalInLine(.F.) // imprime o totalizador no final de cada sessÃ£o
 
 Return oReport
 //
@@ -2049,12 +2076,12 @@ static FUNCTION NoAcento(cString)
 	Local nX     := 0
 	Local nY     := 0
 	Local cVogal := "aeiouAEIOU"
-	Local cAgudo := "Ã¡Ã©Ã­Ã³Ãº"+"Ã�Ã‰Ã�Ã“Ãš"
-	Local cCircu := "Ã¢ÃªÃ®Ã´Ã»"+"Ã‚ÃŠÃŽÃ”Ã›"
-	Local cTrema := "Ã¤Ã«Ã¯Ã¶Ã¼"+"Ã„Ã‹Ã�Ã–Ãœ"
-	Local cCrase := "Ã Ã¨Ã¬Ã²Ã¹"+"Ã€ÃˆÃŒÃ’Ã™"
-	Local cTio   := "Ã£ÃµÃƒÃ•"
-	Local cCecid := "Ã§Ã‡"
+	Local cAgudo := "áéíóú"+"ÝÉÝÓÚ"
+	Local cCircu := "âêîôû"+"ÂÊÎÔÛ"
+	Local cTrema := "äëïöü"+"ÄËÝÖÜ"
+	Local cCrase := "àèìòù"+"ÀÈÌÒÙ"
+	Local cTio   := "ãõÃÕ"
+	Local cCecid := "çÇ"
 	Local cMaior := "&lt;"
 	Local cMenor := "&gt;"
 
@@ -2150,9 +2177,9 @@ Static Function fExpressao(cFilter)
 	"Menor que",; //'Less than'
 	"Menor ou igual a",; //'Less than or equal to'
 	"Maior que","Maior ou igual a",; //'Greater than'###'Greater than or equal to'
-	"Contém a expressão","Não contém a expressão",; //'Contain the expression'###'Do not contain'
-	"Está contido em",; //'Is contained in'
-	"Não está contido em" } //'Not contained into'
+	"Cont�m a express�o","N�o cont�m a express�o",; //'Contain the expression'###'Do not contain'
+	"Est� contido em",; //'Is contained in'
+	"N�o est� contido em" } //'Not contained into'
 
 	cFilter := ""
 
@@ -2328,8 +2355,8 @@ Static Function DispExpr(cFilter)
 	"Menor ou igual a",; //'Less than or equal to'
 	"Maior que","Maior ou igual a",; //'Greater than'###'Greater than or equal to'
 	"Contem Expressao","Nao contem",; //'Contain the expression'###'Do not contain'
-	"Está contido",; //'Is contained in'
-	"Não está contido" } //'Not contained into'
+	"Est� contido",; //'Is contained in'
+	"N�o est� contido" } //'Not contained into'
 
 	cFilter := ""
 
@@ -2337,7 +2364,7 @@ Static Function DispExpr(cFilter)
 		Aadd(aCpo,aCampo[x,1])
 	Next
 
-	DEFINE MSDIALOG oDlg FROM 020, 010 TO 205, 435 TITLE 'Construtor de Expressões' PIXEL //'Expression constructor'
+	DEFINE MSDIALOG oDlg FROM 020, 010 TO 205, 435 TITLE 'Construtor de Express�es' PIXEL //'Expression constructor'
 
 	DEFINE SBUTTON oConf FROM 076, 142 TYPE 1 DISABLE OF oDlg;
 		ACTION ((If(lOk := (nMatch==0),nil,.F.),;
@@ -2345,7 +2372,7 @@ Static Function DispExpr(cFilter)
 
 		DEFINE SBUTTON FROM 076, 174 TYPE 2 ENABLE OF oDlg ACTION (oDlg:End())
 
-		@ 006, 140 SAY 'Expressão' SIZE 055,007 OF oDlg PIXEL //'Expression:'
+		@ 006, 140 SAY 'Express�o' SIZE 055,007 OF oDlg PIXEL //'Expression:'
 		@ 014, 140 GET oExpr VAR cExpr SIZE 070, 009 OF oDlg Picture "@" PIXEL FONT oDlg:oFont
 
 		aValBool := {".T.",".F."}
@@ -2450,7 +2477,7 @@ Static Function ExprOK(cExp,cMsg)
 Return lOk
 
 Static Function fShowErr(e, cMsg)
-	FWAlertError('Erro encontrado na fórmula ' + If(!Empty(cMsg),cMsg,"") , e:description )
+	FWAlertError('Erro encontrado na f�rmula ' + If(!Empty(cMsg),cMsg,"") , e:description )
 	Break
 Return nil
 
@@ -2492,7 +2519,7 @@ Static Function BuildGet(oExpr,cExpr,aCampo,oCampo,oDlg,lFirst,nOpr)
 	oExpr:oGet:UpdateBuffer()
 	oExpr:Refresh()
 
-// Executando a segunda vez para for‡ar a Picture do GET.
+// Executando a segunda vez para for�ar a Picture do GET.
 	If lFirst
 		BuildGet(oExpr,cExpr,aCampo,oCampo,oDlg,.f.,nOpr)
 	EndIf
@@ -2524,7 +2551,7 @@ Static Function ExprFiltro(cTxtFil,cExpFil)
 	Local cExpr    := Space(255)
 	Local lProcess := .F.
 
-	DEFINE MSDIALOG oDlg TITLE 'Expressão' FROM 000,000 TO 100,500 OF oExplorer:oDlg PIXEL //'Expression'
+	DEFINE MSDIALOG oDlg TITLE 'Express�o' FROM 000,000 TO 100,500 OF oExplorer:oDlg PIXEL //'Expression'
 
 	@ 010,010 MSGET oExpr VAR cExpr SIZE 230,010 OF oDlg PIXEL
 
@@ -2832,7 +2859,7 @@ Static Function fGeraCSV()
 	Do While !Eof()
 		nProc++
 
-		MsProcTxt(Alltrim(str(ROUND(nProc/nLinhas*100,0)))+"% concluído.")
+		MsProcTxt(Alltrim(str(ROUND(nProc/nLinhas*100,0)))+"% conclu�do.")
 
 		cDado := ""
 
@@ -2872,13 +2899,13 @@ User Function CADZIC()
 		SetKey(VK_F9, { || u_ExecSql() })
 		AxCadastro("ZIC","Cadastro de Consultas SQL",,,aRotAdic)
 	Else
-		cMsg := "Para utilizar a rotina é necessário criar tabela: "
+		cMsg := "Para utilizar a rotina � necess�rio criar tabela: "
 		cMsg += "ZIC - Cadastro de Consultas SQL" + CRLF
 		cMsg += "ZIC_FILIAL (CHAR("+STRZERO(LEN(xFilial("SD2")),2,0)+")) => Filial" + CRLF
 		cMsg += "ZIC_CODIGO (CHAR(6)) => Codigo" + CRLF
 		cMsg += "ZIC_DESCR (CHAR(200)) => Descricao" + CRLF
 		cMsg += "ZIC_SQL (MEMO) => Script SQL" + CRLF
-		FWAlertError(cMsg, "Atenção")
+		FWAlertError(cMsg, "Aten��o")
 	EndIf
 
 Return nil
@@ -2944,7 +2971,7 @@ Static Function fBloqueios()
 	Local nXi     := 0
 	Local cArqCfg := "lista_bloq.txt"
 
-	cLista := "SRA010;Funcionários" + CRLF
+	cLista := "SRA010;Funcion�rios" + CRLF
 	cLista += "SRD010;Folha" + CRLF
 
 	If Empty(MemoRead(cArqCfg))
@@ -3053,7 +3080,7 @@ Static Function PFX2PEM2(cArquivo, cPsw, cArqCA, cArqCERT, cArqKEY, cRet )
 	cArqCERT := AllTrim( cArqCERT )
 	cArqKEY := AllTrim( cArqKEY )
 
-	//Garante que os arquivos serão gerados com a extensão correta
+	//Garante que os arquivos ser�o gerados com a extens�o correta
 	If Right( Upper( cArqCA ), 4 ) != ".PEM"
 		cArqCA += ".pem"
 	Endif
@@ -3064,7 +3091,7 @@ Static Function PFX2PEM2(cArquivo, cPsw, cArqCA, cArqCERT, cArqKEY, cRet )
 		cArqKEY += ".pem"
 	Endif
 
-	//Gera o arquivo de Certificado de Autorização
+	//Gera o arquivo de Certificado de Autoriza��o
 	If PFXCA2PEM( cArquivo, cArqCA, @cError, cPsw )
 		//Gera o arquivo de Certificado de Cliente
 		If PFXCert2PEM( cArquivo, cArqCERT, @cError, cPsw )
@@ -3076,7 +3103,7 @@ Static Function PFX2PEM2(cArquivo, cPsw, cArqCA, cArqCERT, cArqKEY, cRet )
 			cRet := OemToAnsi("Erro ao extrair o Certificado de Cliente. ") + cError //
 		Endif
 	Else
-		cRet := OemToAnsi("Erro ao extrair o Certificado de Autorização. ") + cError //
+		cRet := OemToAnsi("Erro ao extrair o Certificado de Autoriza��o. ") + cError //
 	Endif
 
 	If !Empty(alltrim(cRet))
@@ -3105,6 +3132,7 @@ WSMETHOD GET WSRECEIVE Query, Page, PageSize WSSERVICE QSQL
 	Local j 	     := 0
 	Local oResponse  := JsonObject():New()
 	Local lRet       := .T.
+	Local cLabel     := ""
 	Default Page     := 1
 	Default PageSize := 100
 	Default Query   := " "
@@ -3134,6 +3162,7 @@ WSMETHOD GET WSRECEIVE Query, Page, PageSize WSSERVICE QSQL
 		EndIf
 
 		oResponse["objects"] := {}
+		oResponse["labels"]  := {}
 
 		oJsonResult := JsonObject():New()
 		oJsonResult["total"]        := nTotalRegistros
@@ -3145,6 +3174,37 @@ WSMETHOD GET WSRECEIVE Query, Page, PageSize WSSERVICE QSQL
 		nRec := 0
 
 		Do While !Eof()
+
+			If nRec == 0 
+				
+				oJsonObj := JsonObject():New()
+
+				For j:= 1 to FCount()
+
+					If FieldName(j) == "R_E_C_N_O_"
+
+						oJsonObj[FieldName(j)] := 'RECNO'
+
+					ElseIf FieldName(j) == "R_E_C_D_E_L_"
+
+						oJsonObj[FieldName(j)] := 'RECDEL'
+
+					Else 
+
+						cLabel := FWhttpEncode(GetSx3Cache(FieldName(j),"X3_TITULO"))
+					
+						If Empty(cLabel) .OR. cLabel == 'null'
+							cLabel := FieldName(j)
+						EndIf
+					
+						oJsonObj[FieldName(j)]   := cLabel
+					
+					EndIf 
+				Next
+
+				aAdd(oResponse["labels"], oJsonObj)
+
+			EndIf 
 
 			nRec++
 
@@ -3193,10 +3253,23 @@ Static Function fRunQuery(Query,cAlias)
 	Local oError := ErrorBlock({|e| aRet[1] := .F., aRet[2] := "Mensagem de Erro: " +chr(10)+ e:Description })
 
 	Begin Sequence
-		dbUseArea(.T.,"TOPCONN",TcGenQry(,,Query),cAlias,.T.,.T.)
+		
+		If !("UPDATE") $ UPPER(Query) .AND. !("INSERT") $ UPPER(Query) .AND.  !("DELETE")  $ UPPER(Query)
+			dbUseArea(.T.,"TOPCONN",TcGenQry(,,Query),cAlias,.T.,.T.)
+		else 
+			nRes := TCSQLEXEC(Query)
+			If nRes <> 0 
+				aRet   := {.F.,'Falha na atualiza��o'}
+			EndIf 
+		EndIf 
+
 		Return aRet
 	End Sequence
 
 	ErrorBlock(oError)
 
 Return aRet
+
+User Function QSQLWEB()
+	FwCallApp("qsqlweb")
+Return nil 

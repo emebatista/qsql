@@ -37,6 +37,24 @@
           }
         }
       }
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: build",
+      "detail": "./scripts/gera_app.sh"
+    },
+    {
+      "label": "Gera APP Protheus",
+      "type": "shell",
+      "command": "./scripts/gera_app.sh",
+      "group": "test",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
     }
   ]
 }

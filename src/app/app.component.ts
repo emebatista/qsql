@@ -10,7 +10,7 @@ import { ResultTableComponent } from './result-table/result-table.component';
 export class AppComponent {
 
   readonly menus: Array<PoMenuItem> = [
-    { label: 'Sair', action: this.onClickSair.bind(this) }
+    { label: ' ', action: this.onClickSair.bind(this) }
   ];
 
   private onClickSair() {
