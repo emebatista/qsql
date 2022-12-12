@@ -1,6 +1,6 @@
 {
     "/app-root/*": {
-      "target": "http://10.2.15.5:1227/app-root/",
+      "target": "http://localhost:1227/app-root/",
       "secure": false,
       "changeOrigin": true,
       "loglevel": "debug",
