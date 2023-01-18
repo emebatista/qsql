@@ -1,20 +1,42 @@
-  <div>
-    <po-button p-label="Executar" (p-click)="busca_dados()"> </po-button>
-    <po-button p-label="Exportar"> </po-button>
-    <po-button p-label="Abrir"> </po-button>
-    <po-button p-label="Salvar"> </po-button>
-    <po-button p-label="RPC User Function"> </po-button>
-    <po-button p-label="Ajuda"> </po-button>
-</div>
-<br>
-  <po-code-editor [(ngModel)]="codeEditor"
-      p-language="sql"
-      [p-suggestions]="[
-        { label: 'D_', insertText: 'D_E_L_E_T_ = \' \' ' },
-        { label: 'R_', insertText: 'R_E_C_N_O_' }
-      ]"
+<div [hidden]="ERP" class="rest-server">
+<form #f="ngForm">
+  <div class="po-row">
+  
+    <po-input
+      [(ngModel)]="url"
+      name="url"
+      id="url"
+      p-clean="true"
+      p-show-required="false"
+      p-placeholder="URL do servidor"
     >
+    </po-input>
+
+    <po-input [(ngModel)]="usuario" name="user" p-placeholder="Usuário" p-clean="true">
+    </po-input>
+
+    <po-password [(ngModel)]="senha" name="password" p-placeholder="Senha" p-clean="true">
+    </po-password>
+    
+  </div>
+</form>
+</div> 
+
+<div>
+  <po-button p-label="Execute" (p-click)="busca_dados()"> </po-button>
+  <po-button p-label="Export"> </po-button>
+  <po-button p-label="Open"> </po-button>
+  <po-button p-label="Save"> </po-button>
+</div>
+<br />
+<po-code-editor
+  [(ngModel)]="codeEditor"
+  p-language="sql"
+  [p-suggestions]="[
+    { label: 'D_', insertText: 'D_E_L_E_T_ = \' \' ' },
+    { label: 'R_', insertText: 'R_E_C_N_O_' }
+  ]"
+>
 </po-code-editor>
 <!-- <p>teste</p>
 <p>{{codeEditor}}</p> -->
-  

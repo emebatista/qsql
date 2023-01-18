@@ -10,12 +10,16 @@ import { ResultTableComponent } from './result-table/result-table.component';
 import { CodeEditorComponent } from './code-editor/code-editor.component';
 import { FormsModule } from '@angular/forms';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { HistoricoComandosComponent } from './historico-comandos/historico-comandos.component';
+import { DisclaimerComponent } from './disclaimer/disclaimer.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     ResultTableComponent,
-    CodeEditorComponent
+    CodeEditorComponent,
+    HistoricoComandosComponent,
+    DisclaimerComponent
   ],
   imports: [
     BrowserModule,

@@ -5,6 +5,7 @@ import { Component, OnInit } from '@angular/core';
   templateUrl: './result-table.component.html',
   styleUrls: ['./result-table.component.css']
 })
+  
 export class ResultTableComponent implements OnInit {
 
   constructor() { }

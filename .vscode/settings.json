@@ -21,5 +21,17 @@
         "titleBar.inactiveForeground": "#15202b99",
         "commandCenter.border": "#15202b99"
     },
-    "peacock.color": "#42b883"
+    "peacock.color": "#42b883",
+    "mssql.connections": [
+        {
+            "server": "192.168.1.100",
+            "database": "",
+            "authenticationType": "SqlLogin",
+            "user": "emerson.totvs",
+            "password": "",
+            "emptyPasswordInput": false,
+            "savePassword": true,
+            "profileName": "Teste"
+        }
+    ]
 }
