@@ -52,7 +52,7 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 	Private cListPerm
 
 
-	If Select("SX2")=0
+	If Type("cFilAnt") == "U"
 		RPCCLEARENV()
 		RPCSetType(2)
 		RPCSetEnv("01","0101","","","","",{})
@@ -1454,7 +1454,7 @@ Return _aReturn
 Static Function fTrataLista(_cLista)
 	Local cReturn := ""
 	Local aReturn := {}
-	Local nItem as number
+	Local nItem as numeric
 
 	aReturn := ListaToArray(_cLista )
 
@@ -1583,7 +1583,7 @@ Static Function ReportDef()
 /*************************************************************************/
 	Local oReport
 	Local cDesc
-	Local nCabs as Number
+	Local nCabs as numeric
 	Local aOrd     	:= aOrdemTxt
 	Private cTitulo	:= cDesc
 
@@ -1634,7 +1634,7 @@ Return oReport
 Static Function LoadView(cOrigem,aCabGrp)
 /*************************************************************************/
 	Local lRet := .T.
-	Local nCampos as number
+	Local nCampos as numeric
 
 	If Select("WORK1") > 0
 		WORK1->(DbCloseArea())
