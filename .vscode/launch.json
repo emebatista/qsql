@@ -2,14 +2,14 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "ng serve",
+			"name": "ng serve chrome",
 			"type": "chrome",
 			"request": "launch",
 			"preLaunchTask": "npm: start",
 			"url": "http://localhost:4200/"
 		},
 		{
-			"name": "ng test",
+			"name": "ng test chrome",
 			"type": "chrome",
 			"request": "launch",
 			"preLaunchTask": "npm: test",
@@ -21,7 +21,7 @@
 			"name": "Protheus",
 			"program": "${command:AskForProgramName}",
 			"cwb": "${workspaceFolder}",
-			"smartclientBin": "/Applications/smartclient_1022/smartclient.app/Contents/MacOS/smartclient",
+			"smartclientBin": "/Applications/smartclient.app/Contents/MacOS/smartclient",
 			"isMultiSession": true,
 			"enableTableSync": true,
 			"enableMultiThread": true

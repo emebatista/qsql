@@ -23,6 +23,7 @@
     "@po-ui/ng-templates": "^14.3.0",
     "@totvs/po-theme": "^14.3.0",
     "@totvs/twebchannel-js": "^1.0.3",
+    "component": "^1.1.0",
     "rxjs": "~7.5.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.11.4"

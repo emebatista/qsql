@@ -55,6 +55,18 @@
         "reveal": "always",
         "panel": "new"
       }
+    },
+    {
+      "type": "typescript",
+      "tsconfig": "tsconfig.app.json",
+      "problemMatcher": [
+        "$tsc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "label": "tsc: build - tsconfig.app.json"
     }
   ]
 }

@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { HistoricoComandosComponent } from './historico-comandos/historico-comandos.component';
 import { DisclaimerComponent } from './disclaimer/disclaimer.component';
+import { SharedService } from './shared.service/shared-service.service';
 
 @NgModule({
   declarations: [
@@ -31,7 +32,7 @@ import { DisclaimerComponent } from './disclaimer/disclaimer.component';
     FormsModule,
     BrowserAnimationsModule
   ],
-  providers: [],
+  providers: [SharedService],
   bootstrap: [AppComponent]
 })
   

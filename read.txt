@@ -1,0 +1,11 @@
+// {
+//     "/app-root/*": {
+//       "target": "http://localhost:1234/",
+//       "secure": false,
+//       "changeOrigin": true,
+//       "loglevel": "debug",
+//       "pathRewrite": {
+//         "^/app-root": ""
+//       }
+//     }
+//   }

@@ -20,6 +20,7 @@ Função para abrir executar consultas SQL no banco de dados
 /*/
 
 User Function AfterLogin()
+	SetKey( K_SH_F10, { || u_QSQLWEB() } )
 	SetKey( K_SH_F11, { || u_CFGQSQL() } )
 	SetKey( VK_F11  , { || u_CFGQSQL() } )
 Return nil
@@ -49,12 +50,7 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 	Private pl_Trace 	:= .F.
 	Private cBarra      := IIF(GetRemoteType()== 2,"/","\")
 	Private cListPerm
-	//	SET AUTOPEN OFF
-	//	SET DELETED OFF
-	//	SET SOFTSEEK ON
-	//	SET DATE BRITISH
-	//	SET CENTURY ON
-	//	SET EPOCH TO 1950
+
 
 	If Select("SX2")=0
 		RPCCLEARENV()
@@ -112,12 +108,12 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 
 	Else
 
-		c_Dtmp := GetTempPath() + 'qsql\'
-		c_Pth := GetTempPath() + 'qsql\cfgqsql.tmp'
+		c_Dtmp := GetTempPath(.T., .F.) + 'qsql\'
+		c_Pth := GetTempPath(.T., .F.) + 'qsql\cfgqsql.tmp'
 
-		If ! ExistDir(GetTempPath() + 'qsql\')
-			MakeDir(GetTempPath() + 'qsql\')
-		EndIf
+		If ! ExistDir(GetTempPath(.T., .F.) + 'qsql\')
+			MakeDir(GetTempPath(.T., .F.) + 'qsql\')
+		EndIf 
 
 	Endif
 
@@ -127,10 +123,14 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 		DEFINE FONT oFont2 NAME "Menlo, Monaco, 'Courier New', monospace" SIZE 0, -12
 		oDlg1:lEscClose     := .F. //Nao permite sair ao se pressionar a tecla ESC.
 
-		oTMultiget2 := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,_cQueryTxt:=u,_cQueryTxt)},001,001,520,150,oFont,,,,,.T.,,,,,,,,,,,.T.)
+		oTMultiget2 := TMultiget():Create(oDlg1,{|u| if(Pcount()>0,_cQueryTxt:=u,_cQueryTxt)},001,001,520,150,oFont,,,,,.T.,,,,,,,,,,,.T.)
+		
+		oTMultiget2:lReadOnly := !lAdmin 
+
 		@ 010 	   ,525 SAY    "____________________"   OF oDlg1 pixel color CLR_HBLUE
 
-		@ 151,10 SAY oSayT VAR cSayT OF oDlg1 pixel color CLR_HBLUE
+		@ 151,010 SAY oSayT     VAR cSayT     OF oDlg1 pixel color CLR_HBLUE
+
 
 		If Empty(cFraseAuto) .and. File(c_Pth)
 			nHandle := FT_FUse(AllTrim(c_Pth))
@@ -595,6 +595,7 @@ Static Function fRun(_aPosicoes,_oJanela)
 			If !AllTrim(_aStruct[j,1]) $ "R_E_C_N_O_ , R_E_C_D_E_L_ , D_E_L_E_T_"
 				AADD(aStruct,_aStruct[j])
 			EndIf
+			aStruct[Len(aStruct),1] := Pad(aStruct[Len(aStruct),1],10)
 		Next
 		aCpoBrw:={}
 		_i:=1
@@ -704,7 +705,7 @@ Static Function fExport()
 	_cDestino := ""
 	aPergs := {}
 	aRet   := {}
-	aCombo := {"CSV","XML"}
+	aCombo := {"CSV","XML","DTC"}
 	aAdd( aPergs ,{6,"Arquivo",_cArquivo,"",,"", 100 ,.T.,"Arquivos .* |*.*","C:\",GETF_LOCALHARD})
 	aAdd( aPergs ,{2,"Formato","CSV"		,aCombo,100,"",.F.})
 
@@ -728,6 +729,11 @@ Static Function fExport()
 		If aRet[2]== "CSV"
 			_cArquivo := StrTran(lower(_cArquivo),".xml",".csv")
 			MsAguarde({|| fGeraCSV() },"Gerando Arquivo CSV","Aguarde...")
+		EndIf
+
+		If aRet[2]== "DTC"
+			_cArquivo := StrTran(lower(_cArquivo),".xml",".dtc")
+			MsAguarde({|| fGeraDTC() },"Gerando Arquivo DTC","Aguarde...")
 		EndIf
 
 		MsgInfo("Planilha Exportada em "+_cPasta)
@@ -1942,7 +1948,7 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 			EndIf
 		Next
 	EndIf
-Return {lImprime,cFraseSQL}
+Return {lImprime .OR. (nStart+nFinish==0), cFraseSQL}
 
 
 // INICIO DO PARSE
@@ -2065,7 +2071,7 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 			EndIf
 		Next
 	EndIf
-Return {lImprime,cFraseSQL}
+Return {lImprime .OR. (nStart+nFinish==0), cFraseSQL}
 
 Static Function fExecQry(cQueryTxt)
 	TCQuery cQueryTxt New Alias "WORK1"
@@ -2880,6 +2886,12 @@ Static Function fGeraCSV()
 	oFileCSV:Close()
 
 Return nil
+Static Function fGeraDTC()
+	DbSelectArea(_cMyAlias)
+	COPY TO "\cadzic\"+_cArquivo
+	MsAguarde({|| CpyS2T( "\cadzic\"+_cArquivo, _cPasta, .F. ) },"Copiando DTC","Aguarde...")
+	FERASE("\cadzic\"+_cArquivo)
+Return nil
 
 User Function CADZIC()
 	Local lTemTabela := .F.
@@ -2897,7 +2909,7 @@ User Function CADZIC()
 	If lTemTabela .AND. lTemCampo
 		aadd(aRotAdic,{ 'Executar'   ,'u_ExecSQL()' , 0, 6})
 		SetKey(VK_F9, { || u_ExecSql() })
-		AxCadastro("ZIC","Cadastro de Consultas SQL",,,aRotAdic)
+		AxCadastro("ZIC","Cadastro de Consultas SQL",,Iif(FWIsAdmin( __cUserID ),".T.",".F."),aRotAdic)
 	Else
 		cMsg := "Para utilizar a rotina é necessário criar tabela: "
 		cMsg += "ZIC - Cadastro de Consultas SQL" + CRLF
@@ -3273,3 +3285,20 @@ Return aRet
 User Function QSQLWEB()
 	FwCallApp("qsqlweb")
 Return nil 
+
+User Function LimpaXML(cTexto)
+Local cReturn := ''
+Local cLib    := '0123456789abcdefghijklmnopqrstuvxywz<>?/()\.,:=+-*^$#@![;] '
+Local j       := 0 
+
+	For j := 1 to Len(cTexto)
+
+		cChar := Substr(cTexto,j,1)
+
+		If cChar $ cLib .OR. cChar $ Upper(cLib) .OR. cChar == '"' .OR. cChar == "'"
+			cReturn += cChar
+		EndIf 
+
+	Next 
+
+Return cReturn

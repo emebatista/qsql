@@ -1,12 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { gravaLog } from '../historico-comandos/historico-comandos.component';
+import { SharedService } from '../shared.service/shared-service.service';
+import { PoTableColumn } from '@po-ui/ng-components';
+import { environment } from 'src/environments/environment';
+import { PoNotificationService } from '@po-ui/ng-components';
 
 @Component({
   selector: 'app-code-editor',
   templateUrl: './code-editor.component.html',
   styleUrls: ['./code-editor.component.css']
 })
-  
+
 export class CodeEditorComponent implements OnInit {
   codeEditor: string;
   url: string;
@@ -15,7 +19,7 @@ export class CodeEditorComponent implements OnInit {
   event!: string;
   ERP: boolean;
 
-  constructor() {
+  constructor(public poNotificar: PoNotificationService, private sharedService: SharedService) {
     this.codeEditor = ' ';
     this.url = '';
     this.usuario = '';
@@ -29,24 +33,23 @@ export class CodeEditorComponent implements OnInit {
     let login_txt = ' ';
     let empresa = '';
     let filial = '';
+    
+    const sharedService = this.sharedService;
+    const notificar = this.poNotificar;
 
-    if (this.codeEditor == ' ')
-     {
+    notificar.success('Conectado');
+  
+    if (this.codeEditor == ' ') {
       gravaLog('Script Vazio ');
     }
 
-    if (!this.ERP) {
-      URL = this.url;
-    } else {
-      //alert('rotina chamada por dentro do Protheus')
-    }
     /* componentes html */
     const tabela = document.getElementById('tabela') as HTMLTableElement | null;
     const log_table = document.getElementById('historico-comandos') as HTMLTableElement | null;
-    
-     if (log_table) { 
-        log_table.innerHTML = ' '; 
-     }
+
+    if (log_table) {
+      log_table.innerHTML = ' ';
+    }
 
     /* constantes do ERP */
     if (this.ERP) {
@@ -56,6 +59,14 @@ export class CodeEditorComponent implements OnInit {
       text_token = JSON.parse(sessionStorage.getItem("ERPTOKEN")!)['access_token'];
     }
     else {
+
+      if (environment.production) {
+        URL = this.url;
+      } else {
+        URL = '/app-root';
+      };
+      gravaLog('url origem: ' + URL);
+
       login_txt = window.btoa(this.usuario + ':' + this.senha);
     }
 
@@ -64,11 +75,11 @@ export class CodeEditorComponent implements OnInit {
     };
 
     const request = new XMLHttpRequest();
- 
+
     request.open('GET', URL + '/qsql' + "?Query=" + this.codeEditor, true)
-    
-    request.timeout = 30000;
-    
+
+    request.timeout = 30000 * 20;
+
     if (this.ERP) {
       gravaLog('Origem: ERP');
       request.setRequestHeader('Authorization', 'Bearer ' + text_token);
@@ -78,8 +89,8 @@ export class CodeEditorComponent implements OnInit {
       request.setRequestHeader('Authorization', 'Basic ' + login_txt);
     }
 
-    request.onerror = function () {
-      gravaLog('Erro ')
+    request.onerror = function (erro) {
+      gravaLog('Erro ' + erro)
     };
 
     request.onload = () => {
@@ -92,43 +103,49 @@ export class CodeEditorComponent implements OnInit {
     };
 
     request.onreadystatechange = function () {
+
       if (request.readyState === 4 && request.status === 200) {
         let dados = JSON.parse(request.responseText);
-        let meta_results = dados.meta;
         let tabela_dados = dados.objects;
-        let lista_de_campos = Object.keys(tabela_dados[0]);
+        // let lista_de_campos = Object.keys(tabela_dados[0]);
 
-        const table = document.getElementById('table')
+        const listaCamposAux = Object.entries(dados.labels)[0][1] as { [key: string]: string };
+        const lista_colunas = Object.entries(listaCamposAux).map(([property, label]) => ({
+          property: property,
+          label: label.trim() + ' (' + property + ')'
+        }));
 
-        const row = tabela?.insertRow();
+        // const table = document.getElementById('table')
 
+        // const row = tabela?.insertRow();
         gravaLog('Obtendo dados... ')
-        
-        for (const celula of lista_de_campos) {
-          const cell = row?.insertCell();
-          if (cell) {
-            cell.outerHTML = '<th height="20">' + celula + '</th>';
-          }
-          else {
-            console.log('erro cabecalho');
-            gravaLog('erro cabecalho');
-          }
+        sharedService.setSharedVariable([<PoTableColumn>lista_colunas, dados.objects]);
 
-        };
+        // for (const celula of lista_de_campos) {
+        //   const cell = row?.insertCell();
+        //   if (cell) {
+        //     cell.outerHTML = '<th height="20">' + celula + '</th>';
+        //   }
+        //   else {
+        //     console.log('erro cabecalho');
+        //     gravaLog('erro cabecalho');
+        //   }
 
-        for (const element of tabela_dados) {
-          const row = tabela?.insertRow();
-          for (const celula of lista_de_campos) {
-            const cell = row?.insertCell();
-            if (cell) {
-              cell.innerHTML = element[celula];
-            }
-            else {
-              gravaLog('erro celula');
-              console.log('erro celula');
-            }
-          };
-        };
+        // };
+
+        // for (const element of tabela_dados) {
+        //   const row = tabela?.insertRow();
+        //   for (const celula of lista_de_campos) {
+        //     const cell = row?.insertCell();
+        //     if (cell) {
+        //       cell.innerHTML = element[celula];
+        //     }
+        //     else {
+        //       gravaLog('erro celula');
+        //       console.log('erro celula');
+        //     }
+        //   };
+        // };
 
       }
       else {
@@ -136,19 +153,19 @@ export class CodeEditorComponent implements OnInit {
 
         switch (request.readyState) {
           case 0:
-            gravaLog('UNSENT...');
+            gravaLog('Unsent...');
             break;
           case 1:
-            gravaLog('OPENED...');
+            gravaLog('Opened...');
             break;
           case 2:
-            gravaLog('HEADERS_RECEIVED...');
+            gravaLog('Headers received...');
             break;
           case 3:
-            gravaLog('LOADING...');
+            gravaLog('Loading...');
             break;
           case 4:
-            gravaLog('DONE...');
+            gravaLog('Done... ' + request.statusText);
             break;
           default:
             gravaLog(request.readyState + '|' + request.status + '|' + 'url:' + URL + 'status:' + request.status + ' ' + request.statusText + request.responseText);
@@ -165,6 +182,17 @@ export class CodeEditorComponent implements OnInit {
 
   restore() {
     this.codeEditor = 'SELECT * FROM SF5010 ';
+  }
+
+  getColumns(columnsData: any[]): Array<PoTableColumn> {
+    return columnsData.map(column => ({
+      property: column.property,
+      label: column.label
+    }));
+  }
+
+  getItems(itemsData: any[]): any[] {
+    return itemsData;
   }
 
 }

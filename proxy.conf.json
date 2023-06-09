@@ -1,11 +1,7 @@
 {
-    "/app-root/*": {
-      "target": "http://192.168.60.43:8084/",
-      "secure": false,
-      "changeOrigin": true,
-      "loglevel": "debug",
-      "pathRewrite": {
-        "^/app-root": ""
-      }
-    }
+  "/app-root": {
+    "target": "http://localhost:1234",
+    "secure": false,
+    "changeOrigin": true
   }
+}
