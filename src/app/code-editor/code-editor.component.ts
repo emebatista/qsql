@@ -84,7 +84,6 @@ export class CodeEditorComponent implements OnInit {
     if (this.ERP) {
       gravaLog('Origem: ERP');
       request.setRequestHeader('Authorization', 'Bearer ' + text_token);
-      //request.setRequestHeader('TenantId', empresa + ',' + filial);
     } else {
       gravaLog('Origem: browser ');
       request.setRequestHeader('Authorization', 'Basic ' + login_txt);
@@ -92,7 +91,7 @@ export class CodeEditorComponent implements OnInit {
 
     request.onerror = function (erro) {
       gravaLog('Erro ' + erro)
-      notificar.error('Script Vazio' + erro);
+      notificar.error('Erro: ' + erro);
     };
 
     request.onload = () => {
@@ -100,7 +99,6 @@ export class CodeEditorComponent implements OnInit {
     };
 
     request.ontimeout = (e) => {
-      // XMLHttpRequest timed out. Do something here.
       gravaLog(request.readyState + '|' + request.status + '|' + 'Timeout 30 segundos ')
     };
 
@@ -125,8 +123,6 @@ export class CodeEditorComponent implements OnInit {
         notificar.success('Conectado');
       }
       else {
-        //responseText
-
         switch (request.readyState) {
           case 0:
             gravaLog('Unsent...');
