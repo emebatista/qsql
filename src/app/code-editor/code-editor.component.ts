@@ -24,6 +24,7 @@ export class CodeEditorComponent implements OnInit {
     this.url = '';
     this.usuario = '';
     this.senha = '';
+    this.poNotificar.setDefaultDuration(3000);
     this.ERP = sessionStorage.getItem("ProCompany") == null ? false : true;
   }
 
@@ -37,10 +38,10 @@ export class CodeEditorComponent implements OnInit {
     const sharedService = this.sharedService;
     const notificar = this.poNotificar;
 
-    notificar.success('Conectado');
   
     if (this.codeEditor == ' ') {
       gravaLog('Script Vazio ');
+      notificar.error('Script Vazio');
     }
 
     /* componentes html */
@@ -91,6 +92,7 @@ export class CodeEditorComponent implements OnInit {
 
     request.onerror = function (erro) {
       gravaLog('Erro ' + erro)
+      notificar.error('Script Vazio' + erro);
     };
 
     request.onload = () => {
@@ -120,33 +122,7 @@ export class CodeEditorComponent implements OnInit {
         // const row = tabela?.insertRow();
         gravaLog('Obtendo dados... ')
         sharedService.setSharedVariable([<PoTableColumn>lista_colunas, dados.objects]);
-
-        // for (const celula of lista_de_campos) {
-        //   const cell = row?.insertCell();
-        //   if (cell) {
-        //     cell.outerHTML = '<th height="20">' + celula + '</th>';
-        //   }
-        //   else {
-        //     console.log('erro cabecalho');
-        //     gravaLog('erro cabecalho');
-        //   }
-
-        // };
-
-        // for (const element of tabela_dados) {
-        //   const row = tabela?.insertRow();
-        //   for (const celula of lista_de_campos) {
-        //     const cell = row?.insertCell();
-        //     if (cell) {
-        //       cell.innerHTML = element[celula];
-        //     }
-        //     else {
-        //       gravaLog('erro celula');
-        //       console.log('erro celula');
-        //     }
-        //   };
-        // };
-
+        notificar.success('Conectado');
       }
       else {
         //responseText
@@ -166,6 +142,7 @@ export class CodeEditorComponent implements OnInit {
             break;
           case 4:
             gravaLog('Done... ' + request.statusText);
+            notificar.error(request.statusText);
             break;
           default:
             gravaLog(request.readyState + '|' + request.status + '|' + 'url:' + URL + 'status:' + request.status + ' ' + request.statusText + request.responseText);
