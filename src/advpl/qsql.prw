@@ -2763,7 +2763,7 @@ Static Function fGeraXml()
 	Local k
 	Local aLinha := {}
 	Local nProc  := 1
-
+	DbGoTop()
 	Do While !EOF()
 
 		MsProcTxt("Aguarde: "+Alltrim(str(ROUND(nProc/nLinhas*100,0))))
