@@ -50,11 +50,15 @@
       "label": "Gera APP Protheus",
       "type": "shell",
       "command": "./scripts/gera_app.sh",
-      "group": "test",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
       "presentation": {
         "reveal": "always",
         "panel": "new"
-      }
+      },
+      "problemMatcher": []
     },
     {
       "type": "typescript",
@@ -62,10 +66,7 @@
       "problemMatcher": [
         "$tsc"
       ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
+      "group": "build",
       "label": "tsc: build - tsconfig.app.json"
     }
   ]

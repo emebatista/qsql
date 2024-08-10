@@ -34,11 +34,11 @@ export class CodeEditorComponent implements OnInit {
     let login_txt = ' ';
     let empresa = '';
     let filial = '';
-    
+
     const sharedService = this.sharedService;
     const notificar = this.poNotificar;
 
-  
+
     if (this.codeEditor == ' ') {
       gravaLog('Script Vazio ');
       notificar.error('Script Vazio');
@@ -78,9 +78,8 @@ export class CodeEditorComponent implements OnInit {
     const request = new XMLHttpRequest();
 
     request.open('GET', URL + '/qsql' + "?Query=" + this.codeEditor, true)
-
+    request.overrideMimeType('text/plain');
     request.timeout = 30000 * 20;
-
     if (this.ERP) {
       gravaLog('Origem: ERP');
       request.setRequestHeader('Authorization', 'Bearer ' + text_token);
@@ -120,7 +119,7 @@ export class CodeEditorComponent implements OnInit {
         // const row = tabela?.insertRow();
         gravaLog('Obtendo dados... ')
         sharedService.setSharedVariable([<PoTableColumn>lista_colunas, dados.objects]);
-        notificar.success('Conectado');
+        notificar.success('Conectado.');
       }
       else {
         switch (request.readyState) {

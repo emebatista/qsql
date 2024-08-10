@@ -1,0 +1,5 @@
+sudo ng build --configuration=production --base-href=/
+npx electron .
+sudo npx electron-builder build
+sudo npx electron-builder --mac
+sudo npx electron-builder --win

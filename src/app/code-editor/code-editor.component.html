@@ -1,26 +1,35 @@
 <div [hidden]="ERP" class="rest-server">
-<form #f="ngForm">
-  <div class="po-row">
-  
-    <po-input
-      [(ngModel)]="url"
-      name="url"
-      id="url"
-      p-clean="true"
-      p-show-required="false"
-      p-placeholder="URL do servidor"
-    >
-    </po-input>
+  <form #f="ngForm">
+    <div class="po-row">
+      <po-input
+        [(ngModel)]="url"
+        name="url"
+        id="url"
+        p-clean="true"
+        [p-show-required]="false"
+        p-placeholder="URL do servidor"
+        [p-minlength]="10000"  
+      >
+      </po-input>
+      
+      <po-input
+        [(ngModel)]="usuario"
+        name="user"
+        p-placeholder="Usuário"
+        p-clean="true"
+      >
+      </po-input>
 
-    <po-input [(ngModel)]="usuario" name="user" p-placeholder="Usuário" p-clean="true">
-    </po-input>
-
-    <po-password [(ngModel)]="senha" name="password" p-placeholder="Senha" p-clean="true">
-    </po-password>
-    
-  </div>
-</form>
-</div> 
+      <po-password
+        [(ngModel)]="senha"
+        name="password"
+        p-placeholder="Senha"
+        p-clean="true"
+      >
+      </po-password>
+    </div>
+  </form>
+</div>
 
 <div>
   <po-button p-label="Execute" (p-click)="busca_dados()"> </po-button>
@@ -28,16 +37,21 @@
   <po-button p-label="Open"> </po-button>
   <po-button p-label="Save"> </po-button>
 </div>
+
+<po-button p-label="Save"> </po-button>
+
+<div>
+  <po-code-editor
+    [(ngModel)]="codeEditor"
+    p-language="sql"
+    p-height="150"
+    [p-suggestions]="[
+      { label: 'D_', insertText: 'D_E_L_E_T_ = \' \' ' },
+      { label: 'R_', insertText: 'R_E_C_N_O_' }
+    ]"
+  >
+  </po-code-editor>
+
+</div>
+
 <br />
-<po-code-editor
-  [(ngModel)]="codeEditor"
-  p-language="sql"
-  p-height="150"
-  [p-suggestions]="[
-    { label: 'D_', insertText: 'D_E_L_E_T_ = \' \' ' },
-    { label: 'R_', insertText: 'R_E_C_N_O_' }
-  ]"
->
-</po-code-editor>
-<!-- <p>teste</p>
-<p>{{codeEditor}}</p> -->

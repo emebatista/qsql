@@ -13,5 +13,6 @@
             "savePassword": true,
             "profileName": "Teste"
         }
-    ]
+    ],
+    "totvsLanguageServer.editor.linter.includes": "/Users/emerson/TOTVS/Include"
 }

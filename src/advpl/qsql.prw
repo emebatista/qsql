@@ -3,12 +3,19 @@
 #include "totvs.ch"
 #include "vkey.ch"
 #include "colors.ch"
-#INCLUDE "FILEIO.CH"
+#INCLUDE 'FILEIO.CH'
 #INCLUDE "FWMBROWSE.CH"
 #INCLUDE "FWMVCDEF.CH"
-#Include "RestFul.CH"
+#Include 'RestFul.CH'
+#Include 'protheus.ch'
+#Include "FWMVCDef.ch"
+
 #DEFINE NUM_INIS 25
-#DEFINE STEP_BUTTON 8.9
+#DEFINE COL_BUTTON 520
+#DEFINE BUTTON_WIDTH 30
+#DEFINE BUTTON_HEIGHT 16
+#DEFINE BUTTON_STEP 31.15
+
 
 #DEFINE CRLF Chr(13)+Chr(10)
 
@@ -23,14 +30,16 @@ User Function AfterLogin()
 	SetKey( K_SH_F10, { || u_QSQLWEB() } )
 	SetKey( K_SH_F11, { || u_CFGQSQL() } )
 	SetKey( VK_F11  , { || u_CFGQSQL() } )
+
 Return nil
 
 User Function QSQL(cFraseAuto,_aPosicoes,_oJanela)
 	u_CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
-Return nil 
+Return nil
 
 User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 	Local cRPO2
+	Local j 
 	Private cTemp    	:= "01"
 	Private _cMyAlias 	:= ""
 	Private _cQueryTxt 	:= "" //space(500)//"Ctrl + Down para mostrar os campos (sair ESC)"+ CRLF +"F5 para executar a query"+CRLF
@@ -50,12 +59,43 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 	Private pl_Trace 	:= .F.
 	Private cBarra      := IIF(GetRemoteType()== 2,"/","\")
 	Private cListPerm
-
+	Private cParsedQuery := ""
+	Private cEstilo1     := ""
+	Private aSize        := AFill(Array(4),0)
 
 	If Type("cFilAnt") == "U"
 		RPCCLEARENV()
 		RPCSetType(2)
 		RPCSetEnv("01","0101","","","","",{})
+	EndIf
+
+	If Empty(GetRmtInfo()[9])
+		cEstilo1 := ""
+		cEstilo1 += "QPushButton{ background-color: #00A3C6; "
+		cEstilo1 += "border: none; "
+		cEstilo1 += "color: #FFFFFF;"
+		cEstilo1 += "padding: 2px 5px;"
+		cEstilo1 += "text-align: center; "
+		cEstilo1 += "text-decoration: none; "
+		cEstilo1 += "display: inline-block; "
+		cEstilo1 += "font-family:arial, sans-serif;	"	
+		cEstilo1 += "font-size: 12px; "
+		cEstilo1 += "font-weight: bold; "
+		cEstilo1 += "border: 2px solid #009FB8; "
+		cEstilo1 += "border-radius: 4px "
+		cEstilo1 += "}"
+		cEstilo1 += "QPushButton:hover { "
+		cEstilo1 += "background-color: #FFFFFF;"
+		cEstilo1 += "color: #00A3C6;"
+		cEstilo1 += "background-repeat: no-repeat;"
+		cEstilo1 += "border: 2px solid #009FB8; "
+		cEstilo1 += "border-radius: 4px "
+		cEstilo1 += "}"
+		cEstilo1 +=	"QPushButton:pressed {"
+		cEstilo1 +=	"  background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
+		cEstilo1 +=	"                                    stop: 0 #FFFFFF, stop: 1 #00A3C6);"
+		cEstilo1 += "color: #000000;"
+		cEstilo1 +=	"}"
 	EndIf
 
 	aListaPerm := fBuscaPerm()
@@ -113,23 +153,83 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 
 		If ! ExistDir(GetTempPath(.T., .F.) + 'qsql\')
 			MakeDir(GetTempPath(.T., .F.) + 'qsql\')
-		EndIf 
+		EndIf
 
 	Endif
 
+	If !IsBlind()
+		aSize	:=  FWGetDialogSize( oMainWnd ) 
+	Else 	
+		aSize[1] := 0
+		aSize[2] := 5
+		aSize[3] := 635
+		aSize[4] := 1338
+	EndIf
+
+	nOffSet := 0
+
 	If Empty(_aPosicoes)
-		DEFINE MSDIALOG oDlg1 TITLE "DM Tools - QSQL "+SPACE(150)+cRPO From 001,001 To 040,150
+
+		DEFINE MSDIALOG oQSQLJanela TITLE "DM Tools - QSQL "+SPACE(10)+cRPO FROM aSize[1],aSize[2] to aSize[3],aSize[4] PIXEL
+
+		//Criando a camada
+		oFwLayer := FwLayer():New()
+		oFwLayer:init(oQSQLJanela,.F.)
+
+		//Adicionando 3 linhas, a de título, a grid e a do rodapé (margem inferior)
+		// PRIMEIRO TITULO
+		oFWLayer:addLine("BROWSE_LINHA_1" , 40, .F.)
+		oFWLayer:addCollumn("BROWSE",   100, .T., "BROWSE_LINHA_1")
+		oFWLayer:addLine("BROWSE_LINHA_2" , 60, .F.)
+		oFWLayer:addCollumn("RODAPE",   100, .T., "BROWSE_LINHA_2")
+
+		oDlg1 := oFWLayer:GetColPanel("BROWSE",    "BROWSE_LINHA_1")
+		oDlg2 := oFWLayer:GetColPanel("RODAPE",    "BROWSE_LINHA_2")
+
+		nLarg := oDlg1:nWidth
+		nAlt  := oDlg1:nHeight
+//		nNaCol := Val(FWInputBox("Digite a Linha", strzero(0,10)))
+		SQL_WIDTH 		:= (oDlg1:nWidth/2)-10 //558
+		SQL_HEIGHT      := (oDlg1:nHeight/1.5) - 65 //125
+
+		RESULT_WIDTH 	:= oDlg2:nWidth/2 // 250
+		RESULT_HEIGHT 	:= (oDlg2:nHeight/2) - 15 // 250 // 120
+
+		BROWSE_WIDTH  	:= oDlg2:nWidth/2// 558
+		BROWSE_HEIGHT 	:= (oDlg2:nHeight/2) - 15 //250 // 120
+
+		SQL_LINE  		:= 022
+		RESULT_LINE  	:= 1 //160
+		BROWSE_LINE 	:= 10 //160
+
 		DEFINE FONT oFont NAME "Menlo, Monaco, 'Courier New', monospace" SIZE 0, -12 BOLD
 		DEFINE FONT oFont2 NAME "Menlo, Monaco, 'Courier New', monospace" SIZE 0, -12
-		oDlg1:lEscClose     := .F. //Nao permite sair ao se pressionar a tecla ESC.
+		oQSQLJanela:lEscClose     := .F. //Nao permite sair ao se pressionar a tecla ESC.
 
-		oTMultiget2 := TMultiget():Create(oDlg1,{|u| if(Pcount()>0,_cQueryTxt:=u,_cQueryTxt)},001,001,520,150,oFont,,,,,.T.,,,,,,,,,,,.T.)
-		
-		oTMultiget2:lReadOnly := !lAdmin 
+		oTMultiget2 := TMultiget():Create(oDlg1,{|u| if(Pcount()>0,_cQueryTxt:=u,_cQueryTxt)},SQL_LINE,001,SQL_WIDTH,SQL_HEIGHT,oFont,,,,,.T.,,,,,,,,,,,.T.)
 
-		@ 010 	   ,525 SAY    "____________________"   OF oDlg1 pixel color CLR_HBLUE
+		// oTMultiget2 := TMultiGet():Create(oDlg1)
+		// oTMultiget2:cName := "oTMultiget2"
+		// oTMultiget2:nTop   := 50
+		// oTMultiget2:nHeight := SQL_HEIGHT
+		// oTMultiget2:lShowHint := .F.
+		// oTMultiget2:lReadOnly := .F.
+		// oTMultiget2:cVariable := "_cQueryTxt"
+		// oTMultiget2:bSetGet := {|u| If(PCount()>0,_cQueryTxt:=u,_cQueryTxt) }
+		// oTMultiget2:lVisibleControl := .T.
+		// oTMultiget2:lWordWrap := .T.
+		// oTMultiget2:ofont := oFont
+		// // oTMultiget2:Align 	:= CONTROL_ALIGN_ALLCLIENT
 
-		@ 151,010 SAY oSayT     VAR cSayT     OF oDlg1 pixel color CLR_HBLUE
+		cResult := ''
+		oResult := TMultiget():Create(oDlg2,{|u| if(Pcount()>0,cResult:=u,cResult)},RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+		oResult:AppendText("Ctrl + Down para mostrar os campos (sair ESC)"+ CRLF +"F5 para executar a query"+ CRLF + CRLF +"SELECT TOP 10 * FROM"+ CRLF +"WHERE D_E_L_E_T_ = ' '"+ CRLF)
+
+		oTMultiget2:lReadOnly := !lAdmin
+
+		@ 001,001 SAY oSayT     VAR cSayT     OF oDlg2 pixel color CLR_HBLUE
+
+		aButtons := {}
 
 
 		If Empty(cFraseAuto) .and. File(c_Pth)
@@ -142,64 +242,108 @@ User Function CFGQSQL(cFraseAuto,_aPosicoes,_oJanela)
 				FT_FGoTop()
 				While ! FT_FEof()
 					oTMultiget2:AppendText(Alltrim(FT_FReadLn()) + CRLF)
-					//_cQueryTxt += Alltrim(FT_FReadLn()) + CRLF
 					FT_FSkip()
 				EndDo
 				FT_FUSE()
 			EndIf
 		Else
 			If empty(cFraseAuto)
-				oTMultiget2:AppendText("Ctrl + Down para mostrar os campos (sair ESC)"+ CRLF +"F5 para executar a query"+ CRLF + CRLF +"SELECT TOP 10 * FROM"+ CRLF +"WHERE D_E_L_E_T_ = ' '"+ CRLF)
+				// oTMultiget2:AppendText("Ctrl + Down para mostrar os campos (sair ESC)"+ CRLF +"F5 para executar a query"+ CRLF + CRLF +"SELECT TOP 10 * FROM"+ CRLF +"WHERE D_E_L_E_T_ = ' '"+ CRLF)
 			EndIf
 		Endif
 
-		oBtn00 := TButton():New( 001                , 525, "&Executa (F5)",oDlg1 ,{|| fRun() }, 55,09,,,.F.,.T.,.F.,,.F.,,,.F. )
-		oBtn01 := TButton():New( 010+STEP_BUTTON*01 , 525, "E&xporta Dados" ,oDlg1 ,{|| fExport() }, 55,09,,,.F.,.T.,.F.,,.F.,,,.F. )
-		oBtn05 := TButton():New( 010+STEP_BUTTON*05 , 525, "Abrir Tabela"    	,oDlg1 ,{|| fDicio()  }, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
 
-	EndIf
+		Aadd( aButtons, {"HISTORIC", {||  fRun()}, "Run (F5)"      , "Executar SQL" , {|| .T.}} )
 
-	If Empty(_aPosicoes)
+		nPos := 0
+
 
 		SetKey( VK_F5 ,{|| fRun()})
+		SetKey( VK_F2 ,{|| Terminal()})
 		SetKey( 75    ,{|| LstCmp()})
+		SetKey( VK_F7 ,{|| LstCmp()})
 
-		oBtn02 := TButton():New( 010+STEP_BUTTON*02, 525, "Abrir Script" ,oDlg1 ,{|| Open() }, 55,09,,,.F.,.T.,.F.,,.F.,,,.F. )
+		Aadd( aButtons, {"HISTORIC", {|| }, "File"      , "File" , {|| .T.}} )
 
 		If lAdmin
-			oBtn03 := TButton():New(010+STEP_BUTTON*03 ,525,"Salvar"   			,oDlg1 ,{|| Save()  }  , 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn04 := TButton():New(010+STEP_BUTTON*04 ,525,"Exec.Formula"   	,oDlg1 ,{|| Terminal()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn05 := TButton():New(010+STEP_BUTTON*05 ,525,"Abrir Tabela"    	,oDlg1 ,{|| fDicio()  }, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn06 := TButton():New(010+STEP_BUTTON*06 ,525,"Historico"			,oDlg1 ,{|| ShwHst(0)} , 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn07 := TButton():New(010+STEP_BUTTON*07 ,525,"Limpa Hist"		    ,oDlg1 ,{|| ShwHst(1) }, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn08 := TButton():New(010+STEP_BUTTON*08 ,525,"Muda RPO"			,oDlg1 ,{|| u_MudaAmb() }, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn00 := TButton():New(010+STEP_BUTTON*09 ,525,"Copia RPO"			,oDlg1 ,{|| u_Promove()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn10 := TButton():New(010+STEP_BUTTON*10 ,525,"Comando no Srv."	,oDlg1 ,{|| fPowerShell()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn11 := TButton():New(010+STEP_BUTTON*11 ,525,"Copia Arquivos"	    ,oDlg1 ,{|| fCopiar()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn12 := TButton():New(010+STEP_BUTTON*12 ,525,"SQL File"	       	,oDlg1 ,{|| u_SqlFile()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			oBtn13 := TButton():New(010+STEP_BUTTON*13 ,525,"Gera Fonte TReport" ,oDlg1 ,{|| u_GeraTReport()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-			btnTrace := TButton():New(010+STEP_BUTTON*15 ,525,Iif(pl_Trace,"End Trace","Start Trace"),oDlg1 ,{|| Trace()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
+			Aadd( aButtons, {"HISTORIC", {||  Terminal() }, "Advpl (F2)"       , "Exec (F2)"  , {|| .T.}} )
+			Aadd( aButtons, {"HISTORIC", {||  fDicio()  }, "MPSDU"       , "MPSDU"   , {|| .T.}} )
+
+			Aadd( aButtons, {"HISTORIC", {||  ShwHst(0)  }, "Hist"       , "Historico"  , {|| .T.}} )
+			Aadd( aButtons, {"HISTORIC", {||  ShwHst(1)  }, "Clr Hist"       , "Limp Hist"  , {|| .T.}} )
+			Aadd( aButtons, {"HISTORIC", {|| }, "RPO"        , "RPO"    , {|| .T.}} )
+			Aadd( aButtons, {"HISTORIC", {||  u_SqlFile()  }, "SQL File"	      , "SQL File"	  , {|| .T.}} )
+			Aadd( aButtons, {"HISTORIC", {||  u_GeraTReport()  }, "TReport"       , "TReport"   , {|| .T.}} )
+			Aadd( aButtons, {"HISTORIC", {||  Trace()  }, Iif(pl_Trace,"End Trace","Start Trace")     , Iif(pl_Trace,"End Trace","Start Trace") , {|| .T.}} )
+			Aadd( aButtons, {"HISTORIC", {||  }, "Tools"     , "Tools" , {|| .T.}} )
+
 		EndIf
 
-		oBtn14   := TButton():New(010+STEP_BUTTON*14 ,525,"Help",oDlg1 ,{|| fHelp()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
-		oBtn16   := TButton():New(010+STEP_BUTTON*16 ,525,"Sair",oDlg1 ,{|| oDlg1:End()}, 55,09,,,.F.,.T.,.F.,,.F.,,,.F.)
+		Aadd( aButtons, {"HISTORIC", {||  fHelp()  }, "Help"	      , "Help"	  , {|| .T.}} )
+		Aadd( aButtons, {"HISTORIC", {||  oQSQLJanela:End()  }, "Sair"	      , "Sair"	  , {|| .T.}} )
 
-		Activate Dialog oDlg1 centered
+		aoBotoes   := {}
+		nLargBotao := 39 
+		nAltBotao  := 18
+		nSpan      := 1
+
+		For j:= 0 to Min( Len( aButtons ), 15) - 1
+			
+			AADD(aoBotoes,TButton():New( 002 , 001 + ( ( ( nLargBotao + nSpan) * j) ) , aButtons[j+1,3] ,oQSQLJanela ,aButtons[j+1,2], nLargBotao,nAltBotao,,,.F.,.T.,.F.,,.F.,,,.F. ))
+
+			If "Tools" $ aButtons[j+1,3]
+				oMenu01 := TMenu():new(0, 0, 0, 0, .T.) 
+				oMenu0101 := tMenuItem():new(oMenu01, "PowerShell"  , , , , {|| fPowerShell()}, , , , , , , , , .T.)
+				oMenu0102 := tMenuItem():new(oMenu01, "File Transf.", , , , {|| fCopiar()}, , , , , , , , , .T.)
+				oMenu0103 := tMenuItem():new(oMenu01, "PFX to PEM"  , , , , {|| u_ConvCert()}, , , , , , , , , .T.)
+				oMenu01:add(oMenu0101) 
+				oMenu01:add(oMenu0102) 
+				oMenu01:add(oMenu0103) 
+				ATail(aoBotoes):setPopupMenu(oMenu01) 
+
+			EndIf 
+
+			If "RPO" $ aButtons[j+1,3]
+
+				oMenu02 := TMenu():new(0, 0, 0, 0, .T.) 
+				oMenu0201 := tMenuItem():new(oMenu02, "Muda RPO no appserver.ini"   , , , , {|| u_MudaAmb()}, , , , , , , , , .T.)
+				oMenu0202 := tMenuItem():new(oMenu02, "Copia RPO para outra pasta"  , , , , {|| u_Promove()}, , , , , , , , , .T.)
+				oMenu02:add(oMenu0201) 
+				oMenu02:add(oMenu0202) 
+				ATail(aoBotoes):setPopupMenu(oMenu02) 
+
+			EndIf 
+
+			If "File" == aButtons[j+1,3]
+				oMenu03 := TMenu():new(0, 0, 0, 0, .T.) 
+				oMenu0301 := tMenuItem():new(oMenu03, "Open"   , , , , {|| Open() }, , , , , , , , , .T.)
+				oMenu0302 := tMenuItem():new(oMenu03, "Save"   , , , , {|| Save() }, , , , , , , , , .T.)
+				oMenu0303 := tMenuItem():new(oMenu03, "Export" , , , , {|| fExport()}, , , , , , , , , .T.)
+				oMenu03:add(oMenu0301) 
+				oMenu03:add(oMenu0302) 
+				oMenu03:add(oMenu0303) 
+				ATail(aoBotoes):setPopupMenu(oMenu03) 
+			EndIf 
+
+			ATail(aoBotoes):SetCss( cEstilo1 )
+
+		Next 
+
+		Activate Dialog oQSQLJanela centered
 		SetKey( VK_F5, Nil )
+		SetKey( VK_F2, Nil )
 		SetKey( 75,Nil)
-
 	Else
-
 		If Empty(_aPosicoes)
 			fRun()
 			fExport()
 		Else
 			fRun(_aPosicoes,_oJanela)
 		EndIF
-
 	EndIf
 
 Return
+
 
 Static Function Trace()
 	Local cMessage := ""
@@ -210,7 +354,7 @@ Static Function Trace()
 
 	If ! pl_Trace
 		if TCSqlReplay(1, @cMessage) == .F.
-			Aviso("Atencao","Nao existe a implementacÃƒÂ£o")
+			Aviso("Atencao","Nao existe a implementacao")
 			Return
 		endif
 
@@ -236,10 +380,9 @@ Static Function Trace()
 
 		cMessage := ""
 		if TCSqlReplay(4, @cMessage) == .T.
-			Aviso("Atencao","Trace foi iniciado os processos ficarÃƒÂ£o mais lentos")
+			Aviso("Atencao","Trace foi iniciado os processos ficarao mais lentos")
 		endif
 		pl_Trace := .T.
-		btnTrace:cTitle := "End Trace"
 	Else
 
 		// Finaliza o TCSqlReplay
@@ -264,7 +407,7 @@ Static Function Trace()
 					EndDo
 					FT_FUSE()
 
-					oResult := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,c_Aux:=u,c_Aux)},160,001,588,170,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+					oResult := TMultiget():Create(oDlg2,{|u|if(Pcount()>0,c_Aux:=u,c_Aux)},RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
 				Endif
 
 			EndIf
@@ -273,7 +416,6 @@ Static Function Trace()
 		pl_Trace := .F.
 		UnLockByName("QSQLTRACE.LOG",.T.,.T.)
 
-		btnTrace:cTitle := "Start Trace"
 	EndIf
 
 Return
@@ -330,17 +472,16 @@ Static Function fDicio()
 
 			cFiltro := DispExpr()
 
-			If ! Empty(cFiltro)
+			If Empty(cFiltro)
+				cFiltro := ".T."
+			EndIf
 
-				If MsgYesNo("Pre-Visualiza dados?","Confirma")
-					MsAguarde({|| DbSetfilter({|| &(cFiltro)}, cFiltro) },"Filtrando","Aguarde...")
-					fShowTrab(cArqDic,aSelCampos)
-				Else
-					MsAguarde({|| DbSetfilter({|| &(cFiltro)}, cFiltro) },"Filtrando","Aguarde...")
-				EndIf
+			If MsgYesNo("Pre-Visualiza dados?","Confirma")
+				MsAguarde({|| DbSetfilter({|| &(cFiltro)}, cFiltro) },"Filtrando","Aguarde...")
+				fShowTrab(cArqDic,aSelCampos)
 			Else
-				Break
-			Endif
+				MsAguarde({|| DbSetfilter({|| &(cFiltro)}, cFiltro) },"Filtrando","Aguarde...")
+			EndIf
 
 		Else
 
@@ -378,8 +519,8 @@ Static Function fOpenTab(_cAlias)
 	nPx := 1
 
 	lNewStru	:= .F.
-
-	oBrow := MsBrGetDBase():New( 160, 001, 580, 120,,,, oDlg1,,,,,,,,,,,, .F., _cAlias, .T.,, .F.,,, )
+	// 160
+	oBrow := MsBrGetDBase():New( BROWSE_LINE, 001, BROWSE_WIDTH, BROWSE_HEIGHT,,,, oDlg2,,,,,,,,,,,, .F., _cAlias, .T.,, .F.,,, )
 	//oBrow:Align := CONTROL_ALIGN_ALLCLIENT
 	oBrow:nAt := 1
 
@@ -455,7 +596,7 @@ Static Function fRun(_aPosicoes,_oJanela)
 	cSayTF := " "
 	oSayT:Refresh()
 
-	If type("oBrowseSQL")=="O" .or. type("oResult") == "O"
+	If type("oBrowseSQL")=="O"
 		oBrowseSQL:End()
 	EndIf
 
@@ -520,15 +661,16 @@ Static Function fRun(_aPosicoes,_oJanela)
 	_cOper  := {"DROP","TRUNCATE","INSERT","UPDATE","DELETE"}
 	lSelect := .T.
 
-	If !lAdmin 
-		For _i:=1 to Len(_cOper)
-			If AT(_cOper[_i],UPPER(_cQueryTxt))>0
+	For _i:=1 to Len(_cOper)
+		If AT(_cOper[_i],UPPER(_cQueryTxt))>0
+			lSelect := .F.
+			If !lAdmin
 				APMsgAlert("Alteracao de dados NAO permitida!",cTitulo)
 				Return
-			Endif
-		Next
-	EndIf 
-	
+			EndIf
+		Endif
+	Next
+
 	//- ValidaÃ§Ã£o adicional pra gente nÃ£o cair nas prÃ³prias armadilhas de dar select/update sem where
 	if AT("TOP",UPPER(_cQueryTxt))==0 .and. AT("WHERE",UPPER(_cQueryTxt))==0 .and. AT("DISTINCT",UPPER(_cQueryTxt))==0
 		if !MsgYesNo("Deseja realizar esta operacao sem filtros?","Confirma")
@@ -542,12 +684,16 @@ Static Function fRun(_aPosicoes,_oJanela)
 	If lSelect
 
 		_cQueryTxt :=  AllTrim(fParseParam(_cQueryTxt)[2])
+		cParsedQuery := _cQueryTxt
+
 		cSayTI :=  Time()
 		cSayT := "Inicio: " + cSayTI
 		oSayT:Refresh()
 
-		If !fPerm(_cQueryTxt)
+		If !lAdmin .AND. !fPerm(_cQueryTxt)
+			cSayT := "Script acessa tabelas bloqueadas"
 			APMsgAlert("Script acessa tabelas bloqueadas","Erro")
+			oSayT:Refresh()
 			Return .f.
 		EndIf
 
@@ -573,14 +719,18 @@ Static Function fRun(_aPosicoes,_oJanela)
 			DbCloseArea()
 		EndIf
 
-		aRet := fRunQuery(_cQueryTxt, "WORK1")
+		aRet := u_fRunQuery(_cQueryTxt, "WORK1")
 
 		If !aRet[1]
 			_cRet = TCSQLERROR()
-			oResult := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,_cRet:=u,_cRet)},160,001,588,170,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+			oResult := TMultiget():Create(oDlg2,{|u|if(Pcount()>0,_cRet:=u,_cRet)}      ,RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
 			_cRet = TCSQLERROR()
 			_cQueryTxt := cBkpSql
-		EndIf 
+		Else
+			_cRet := _cQueryTxt + CRLF+ "Comando executado com sucesso."+CRLF
+			oResult := TMultiget():Create(oDlg2,{|u|if(Pcount()>0,_cRet:=u,_cRet)}      ,RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+			_cQueryTxt := cBkpSql
+		EndIf
 
 		If !Select("WORK1")
 			//_cQueryTxt := cBkpSql
@@ -594,8 +744,11 @@ Static Function fRun(_aPosicoes,_oJanela)
 		For j:= 1 to Len(_aStruct)
 			If !AllTrim(_aStruct[j,1]) $ "R_E_C_N_O_ , R_E_C_D_E_L_ , D_E_L_E_T_"
 				AADD(aStruct,_aStruct[j])
+				aStruct[Len(aStruct),1] := Pad(aStruct[Len(aStruct),1],10)
+				If aStruct[Len(aStruct),2] == "C" .AND. aStruct[Len(aStruct),3] > 2000
+					aStruct[Len(aStruct),3] := 2000
+				EndIf
 			EndIf
-			aStruct[Len(aStruct),1] := Pad(aStruct[Len(aStruct),1],10)
 		Next
 		aCpoBrw:={}
 		_i:=1
@@ -642,10 +795,12 @@ Static Function fRun(_aPosicoes,_oJanela)
 		WORK1->(dbclosearea())
 
 		If Empty(_aPosicoes)
-			_aPosicoes := {160,001,295,588}
+			_aPosicoes := {BROWSE_LINE,001,BROWSE_HEIGHT,BROWSE_WIDTH}
 		EndIf
-		oBrowseSQL := MsSelect():New(_cMyAlias,"","",aCpoBrw,.F.,"",_aPosicoes)
+		oBrowseSQL := MsSelect():New(_cMyAlias,"","",aCpoBrw,.F.,"",_aPosicoes,,,oDlg2)
 		oBrowseSQL:oBrowse:Refresh()
+		oResult:blDblClick := {|| Showstr(cParsedQuery)}
+
 
 		cSayTF := Time()
 		cSayT += " Montagem: " + ELAPTIME( cSayTI, cSayTF )
@@ -657,7 +812,7 @@ Static Function fRun(_aPosicoes,_oJanela)
 
 			cResult := ""
 			For _i := 1 to Len(a_QryTxt)
-				nSqlError := TcSqlExec(a_QryTxt[_i])
+				nSqlError := TcSqlExec(StrTran(a_QryTxt[_i],";",""))
 
 				if nSqlError <> 0
 					cResult += "Qry "+ StrZero(_i,5) +" Erro: " + TcSqlError() + chr(13) + chr(10)
@@ -678,7 +833,7 @@ Static Function fRun(_aPosicoes,_oJanela)
 			endif
 		Endif
 
-		oResult := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,cResult:=u,cResult)},160,001,588,170,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+		oResult := TMultiget():Create(oDlg2,{|u| if(Pcount()>0,cResult:=u,cResult)},RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
 
 		_cQueryTxt := cBkpSql
 
@@ -799,27 +954,53 @@ Static Function LstCmp()
 	Endif
 RETURN
 
+Static Function fErro(oErro)
+	cResult := oErro:Description
+	oResult := TMultiget():Create(oDlg2,{|u|if(Pcount()>0,cResult:=u,cResult)},RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+Return nil
+
 Static Function Terminal()
-	Local oError := ErrorBlock({|e| MsgAlert("Mensagem de Erro: " +chr(10)+ e:Description, "ERRO")})
+	Local nPos := iif(type("oTMultiget2")=='O',oTMultiget2:nPos,1)
+	Local _i 		:= 0
+	Local oError := ErrorBlock({|e| fErro(e)})
 
 	IF !MsgYesNo("Confirma Execblock?","Confirma")
 		Return nil
 	EndIf
 
-	cExpr := _cQueryTxt
+	cExpr := ""
+
+	For _i := 1 to Len(_cQueryTxt)
+
+		If Substr(_cQueryTxt,_i, 2) == CRLF
+			cExpr := ""
+			_i++
+		Else
+			cExpr += Substr(_cQueryTxt,_i, 1)
+			If nPos <= _i .AND. Substr(_cQueryTxt,_i + 1, 2) == CRLF .OR. _i >= Len(_cQueryTxt)
+				Exit
+			EndIf
+		EndIf
+
+	Next
 
 	If !Empty(cExpr)
 		Begin Sequence
 			xReturn := cValToChar(&cExpr)
-			cResult := chr(13)+chr(10)+xReturn
-			oResult := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,cResult:=u,cResult)},160,001,588,170,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+			If !(Empty(Alltrim(xReturn)))
+				cResult := chr(13)+chr(10)+xReturn
+				oResult := TMultiget():Create(oDlg2,{|u|if(Pcount()>0,cResult:=u,cResult)},RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+			EndIf
 			Return .T.
 		End Sequence
+	Else
+		FwAlertError("Preencher Fórmula","Atenção")
 	EndIf
 
 	ErrorBlock(oError)
 
 Return .F.
+
 
 Static Function fPowerShell()
 	Local oError := ErrorBlock({|e| MsgAlert("Mensagem de Erro: " +chr(10)+ e:Description, "ERRO")})
@@ -844,7 +1025,7 @@ Static Function fPowerShell()
 			EndIf
 
 			Return .T.
-		
+
 		End Sequence
 
 	EndIf
@@ -879,9 +1060,11 @@ Static Function GrvHst(c_Qry)
 	EndIf
 	AADD(a_Aux, DtoC(Date()) + "-" + Time() +": " + c_Qry)
 
-	For n_I := Iif(Len(a_Aux) < 1000, 1, Len(a_Aux) - 1000) to Len(a_Aux)
-		c_Aux +=  a_Aux[n_I] + CRLF
-	Next
+	If Len(a_Aux) >= 1
+		For n_I := Min(Len(a_Aux),1000) to 1 step -1
+			c_Aux +=  a_Aux[n_I] + CRLF
+		Next
+	EndIf
 
 	MemoWrite(c_Hst,c_Aux)
 Return
@@ -912,7 +1095,7 @@ Static function ShwHst(nPar)
 			EndDo
 			FT_FUSE()
 
-			oResult := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,c_Aux:=u,c_Aux)},160,001,588,170,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+			oResult := TMultiget():Create(oDlg2,{|u|if(Pcount()>0,c_Aux:=u,c_Aux)},RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
 
 		EndIf
 	EndIf
@@ -1140,7 +1323,7 @@ Static Function fShowTrab(_cAlias,_aCampos)
 
 	lNewStru	:= .F.
 
-	oBrow := MsBrGetDBase():New( 160, 001, 580, 120,,,, oDlg1,,,,,,,,,,,, .F., _cAlias, .T.,, .F.,,, )
+	oBrow := MsBrGetDBase():New( BROWSE_LINE, 001, BROWSE_WIDTH, BROWSE_HEIGHT,,,, oDlg2,,,,,,,,,,,, .F., _cAlias, .T.,, .F.,,, )
 	//oBrow:Align := CONTROL_ALIGN_ALLCLIENT
 	oBrow:nAt := 1
 
@@ -1354,14 +1537,14 @@ static function fHelp()
 		"<br><b>Exporta Dados:</b> Exporta o resultado da consulta no formato XML ou CSV (pode ser importado no Excel)." +;
 		"<br><b>Abrir:</b> Abre qualquer arquivo para edicao (local ou remoto). Util para editar arquivos de menus, alÃƒÂ©m de scripts SQL." +;
 		"<br><b>Salvar:</b> Salva o texto que esta' na tela em um arquivo. Pode ser qualquer extensÃƒÂ£o, inclusive menus." +;
-		"<br><b>Exec. Formula:</b> Executa uma ou mais user functions ou scripts em ADVPL, em sequencia, separados por vÃƒÂ­gula(,)." +;
-		"<br><b>Abrir Tabela:</b> Permite editar (inc./alt./exc./recuperar) das linhas (registros) de uma tabela aberta (SX ou DB)." +;
+		"<br><b>Formula:</b> Executa uma ou mais user functions ou scripts em ADVPL, em sequencia, separados por vÃƒÂ­gula(,)." +;
+		"<br><b>MPSDU:</b> Permite editar (inc./alt./exc./recuperar) das linhas (registros) de uma tabela aberta (SX ou DB)." +;
 		"<br><b>Historico:</b> Carrega o Historico de comandos." +;
 		"<br><b>Limpa Hist.:</b> Limpar o Historico, caso necessario." +;
 		"<br><b>Mudar RPO:</b> Muda o caminho do RPO no .ini (appserver.ini), permitindo mudanca a quente. Apenas em Windows." +;
 		"<br><b>Copia RPO:</b> Faz uma copia do RPO para outra pasta, facilitando a criacao de copias de seguranca." +;
 		"<br><b>Comando no Srv.:</b> Executa um comando no servidor. Exemplo: reiniciar TSS, executar .BAT, etc." +;
-		"<br><b>Copia Arquvos:</b> Copia arquivos da pasta local para o servidor ou vice versa. Exemplo: copia de patches ou substituicao de menu." +;
+		"<br><b>Transf.Arq.:</b> Copia arquivos da pasta local para o servidor ou vice versa. Exemplo: copia de patches ou substituicao de menu." +;
 		"<br><b>Gera Fonte TReport:</b> Com base na Query carregada, abre uma tela de parametros com dados para geracao de codigo em ADVPL do relatorio correspondente no objeto TReport." +;
 		"<br><b>Help:</b> Mostra esta tela de help." +;
 		"<br><b>Sair:</b> Fecha este utilitario." +;
@@ -1476,7 +1659,7 @@ Return cReturn
 User Function GeraTReport()
 	Local cQuery       :=  _cQueryTxt // SELECT A2_EST,A2_COD, A2_NOME, A2_SALDUP FROM SA2010 WHERE A2_EST = <%ESTADO%> ORDER BY A2_EST '  //<<CQUERY>>
 	Local cNomeRelat   := 'QSQLR001' // <<NOME_RELATORIO>>
-	Local cPerg        := "QSQL01" // <<CPERG_RELATORIO>>
+	Local cPerg        := PAD("QSQL01",10) // <<CPERG_RELATORIO>>
 	Local cTituloRel   := "Consulta Generica                                      " // <<TITULO_RELATORIO>>
 	Local aCabGrp      := Pad("",50) //<<CAB_GRUPO>>  Campos precisam vir na query. Se nao tiver agrupamento, passar vazio
 	Local aCabGrpTxt   := Pad("",50) // <<CAB_GRUPO_TXT>> // legendas das sessao de cabecalho
@@ -1652,6 +1835,10 @@ Static Function LoadView(cOrigem,aCabGrp)
 	If len(aOrdem) > 0 .AND. cOrigem != 'modelo'
 		cQuery  += ' ORDER BY '+aOrdem[oSecaoListagem:GetOrder()]+' '
 	EndIf
+
+	If cOrigem == 'modelo'
+		cQuery := StrTran(cQuery,"WHERE ","WHERE 1=0 AND ")
+	EndIf 
 
 	MsAguarde({|| dbUseArea(.T., "TOPCONN", TCGenQRY(,,cQuery), "WORK1", .F., .T.) },"Consultando","Aguarde...")
 
@@ -1860,6 +2047,39 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 	Local aRet   := {}
 	Local aParam := {}
 	Local lImprime := .F.
+	Local cFlagSX1 := "<%SX1:"
+	Local nSX1Ini  := AT(cFlagSX1, cFraseSQL)
+	Local nSX1Fim  := AT("%>"    , cFraseSQL)
+	Local lProssegue := .T. 
+	If  nSX1Ini > 0 .AND. nSX1Fim < 20 .AND. nSX1Fim > 0
+		cPerg := Substr(cFraseSQL, nSX1Ini + Len(cFlagSX1), nSX1Fim - nSX1Ini - Len(cFlagSX1))
+		
+		lProssegue := Pergunte(cPerg, .T.)
+		lImprime   := lProssegue
+
+		For j:= 1 to 30
+			cVar := &("MV_PAR"+StrZero(j,2))
+
+			Do Case
+			Case TYPE("cVar") == "D"
+				cVar := DTOS(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", "'" + cVar + "'")
+			Case TYPE("cVar") == "N"
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", cVar )
+			Case TYPE("cVar") == "L"
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", cVar )
+			Case TYPE("cVar") == "C"
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", "'" + cVar + "'")
+			OtherWise
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", "'" + cVar + "'")
+			EndCase
+		Next
+		cFraseSQL := StrTran(cFraseSQL, cFlagSX1 + cPerg + "%>", "")
+	EndIf
 	For j:=1 to Len(cFraseSQL)
 		If Substr(cFraseSQL,j,2)=="<%"
 			nStart ++
@@ -1893,27 +2113,21 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 					nPos_    := Rat(' ',aParam[Len(aParam)])
 					cF3      := Substr(aParam[Len(aParam)] , nPos_ + 1 , Len ( aParam[Len(aParam)]) - nPos_ )
 					cRetF3   := Alltrim(Posicione('SXB',1,PAD(cF3,6)+'4','XB_CONTEM'))
-
 					If At(">",cRetF3) > 0
 						cRetF3 := Alltrim(Substr(cRetF3,At(">",cRetF3)+1,40))
 					EndIf
-
 					// se for no formato C99
-
 					if Substr(cF3,1,1)=="C" .AND. Substr(cF3,2,1)$"0123456789" .AND. Substr(cF3,3,1)$"0123456789"
 						nTamanho := Val(Substr(cF3,2,2))
 						cPrompt := StrTran(aParam[Len(aParam)],cF3,'')
 						cF3 := ''
 					else
-
 						nTamanho := GetSx3Cache(cRetF3,'X3_TAMANHO')
-
 						// Se voltar vazio
-						If ValType(nTamanho)== 'U'
+						If ValType(nTamanho)== 'U' .OR. Empty(cRetF3)
 							nTamanho := nFinish - nStart  //Len((&cRetF3))
 							cPrompt := StrTran(aParam[Len(aParam)],cF3,'')
 							cF3      := ""
-
 						else
 							If Empty(Posicione('SXB',1,cF3,'XB_ALIAS'))
 								cF3 := ''
@@ -1923,9 +2137,7 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 							EndIf
 						endif
 					endif
-
 					cInicializar := Space(nTamanho)
-
 				EndIf
 				aAdd( aPergs ,{1,cPrompt,cInicializar,iif(UPPER(LEFT(aParam[Len(aParam)],4))=="DATA","@E 99/99/99","@!"),'.T.',cF3,'.T.',nTamanho*5,.F.})
 			EndIf
@@ -1935,7 +2147,8 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 	Next
 	IF len(aPergs)>0
 		If cOrigem != 'modelo'
-			lImprime := ParamBox(aPergs,"Parametros",aRet,,,,,,,'TRESTR15B',.T.,.T.)
+			lProssegue := ParamBox(aPergs,"Parametros",aRet,,,,,,,'ALESTR03',.T.,.T.)
+			lImprime   := lProssegue
 		Else
 			lImprime := .T.
 			aRet := Afill(Array(Len(aPergs)),'')
@@ -1948,7 +2161,7 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 			EndIf
 		Next
 	EndIf
-Return {lImprime .OR. (nStart+nFinish==0), cFraseSQL}
+Return {(lImprime .OR. (nStart+nFinish==0)) .AND. lProssegue, cFraseSQL}
 
 
 // INICIO DO PARSE
@@ -1969,7 +2182,7 @@ Return {lImprime .OR. (nStart+nFinish==0), cFraseSQL}
 	xTReport := STRTRAN(xTReport,'<<DATA>>'				,Alltrim(DTOC(cData)))
 	xTReport := STRTRAN(xTReport,'<<CLIENTE>>'			,Alltrim(cCliente))
 
-	oResult := TMultiget():Create(oDlg1,{|u|if(Pcount()>0,xTReport:=u,xTReport)},160,001,588,170,oFont2,,,,,.T.,,,,,,,,,,,.T.)
+	oResult := TMultiget():Create(oDlg2,{|u|if(Pcount()>0,xTReport:=u,xTReport)},RESULT_LINE+10,001,RESULT_WIDTH-10,RESULT_HEIGHT,oFont2,,,,,.T.,,,,,,,,,,,.T.)
 
 Return nil
 
@@ -1983,6 +2196,39 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 	Local aRet   := {}
 	Local aParam := {}
 	Local lImprime := .F.
+	Local cFlagSX1 := "<%SX1:"
+	Local nSX1Ini  := AT(cFlagSX1, cFraseSQL)
+	Local nSX1Fim  := AT("%>"    , cFraseSQL)
+	Local lProssegue := .T.
+	If  nSX1Ini > 0 .AND. nSX1Fim < 20 .AND. nSX1Fim > 0
+		cPerg := Substr(cFraseSQL, nSX1Ini + Len(cFlagSX1), nSX1Fim - nSX1Ini - Len(cFlagSX1))
+
+		lProssegue := Pergunte(cPerg, .T.)
+		lImprime   := lProssegue
+
+		For j:= 1 to 30
+			cVar := &("MV_PAR"+StrZero(j,2))
+
+			Do Case
+			Case TYPE("cVar") == "D"
+				cVar := DTOS(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", "'" + cVar + "'")
+			Case TYPE("cVar") == "N"
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", cVar )
+			Case TYPE("cVar") == "L"
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", cVar )
+			Case TYPE("cVar") == "C"
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", "'" + cVar + "'")
+			OtherWise
+				cVar := cValToChar(cVar)
+				cFraseSQL := StrTran(cFraseSQL,"<%"+("MV_PAR"+StrZero(j,2))+"%>", "'" + cVar + "'")
+			EndCase
+		Next
+		cFraseSQL := StrTran(cFraseSQL, cFlagSX1 + cPerg + "%>", "")
+	EndIf
 	For j:=1 to Len(cFraseSQL)
 		If Substr(cFraseSQL,j,2)=="<%"
 			nStart ++
@@ -2016,27 +2262,21 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 					nPos_    := Rat(' ',aParam[Len(aParam)])
 					cF3      := Substr(aParam[Len(aParam)] , nPos_ + 1 , Len ( aParam[Len(aParam)]) - nPos_ )
 					cRetF3   := Alltrim(Posicione('SXB',1,PAD(cF3,6)+'4','XB_CONTEM'))
-
 					If At(">",cRetF3) > 0
 						cRetF3 := Alltrim(Substr(cRetF3,At(">",cRetF3)+1,40))
 					EndIf
-
 					// se for no formato C99
-
 					if Substr(cF3,1,1)=="C" .AND. Substr(cF3,2,1)$"0123456789" .AND. Substr(cF3,3,1)$"0123456789"
 						nTamanho := Val(Substr(cF3,2,2))
 						cPrompt := StrTran(aParam[Len(aParam)],cF3,'')
 						cF3 := ''
 					else
-
 						nTamanho := GetSx3Cache(cRetF3,'X3_TAMANHO')
-
 						// Se voltar vazio
-						If ValType(nTamanho)== 'U'
+						If ValType(nTamanho)== 'U' .OR. Empty(cRetF3)
 							nTamanho := nFinish - nStart  //Len((&cRetF3))
 							cPrompt := StrTran(aParam[Len(aParam)],cF3,'')
 							cF3      := ""
-
 						else
 							If Empty(Posicione('SXB',1,cF3,'XB_ALIAS'))
 								cF3 := ''
@@ -2046,9 +2286,7 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 							EndIf
 						endif
 					endif
-
 					cInicializar := Space(nTamanho)
-
 				EndIf
 				aAdd( aPergs ,{1,cPrompt,cInicializar,iif(UPPER(LEFT(aParam[Len(aParam)],4))=="DATA","@E 99/99/99","@!"),'.T.',cF3,'.T.',nTamanho*5,.F.})
 			EndIf
@@ -2058,7 +2296,8 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 	Next
 	IF len(aPergs)>0
 		If cOrigem != 'modelo'
-			lImprime := ParamBox(aPergs,"Parametros",aRet,,,,,,,'TRESTR15B',.T.,.T.)
+			lProssegue := ParamBox(aPergs,"Parametros",aRet,,,,,,,'ALESTR03',.T.,.T.)
+			lImprime   := lProssegue
 		Else
 			lImprime := .T.
 			aRet := Afill(Array(Len(aPergs)),'')
@@ -2071,7 +2310,7 @@ Static Function fParseParam(_cFraseSql,cOrigem)
 			EndIf
 		Next
 	EndIf
-Return {lImprime .OR. (nStart+nFinish==0), cFraseSQL}
+Return {(lImprime .OR. (nStart+nFinish==0)) .AND. lProssegue, cFraseSQL}
 
 Static Function fExecQry(cQueryTxt)
 	TCQuery cQueryTxt New Alias "WORK1"
@@ -2145,181 +2384,6 @@ static FUNCTION NoAcento(cString)
 	cString := StrTran( cString, CRLF, " " )
 
 Return cString
-
-Static Function fExpressao(cFilter)
-	Local oDlg
-	Local oExpr
-	Local oCampo
-	Local oBtnOp
-	Local oBtnE
-	Local oBTNou
-	Local oBTNa
-	Local oBtnExp
-	Local oBtn
-	Local oTxtFil
-	Local oOper
-	Local oMatch
-	Local oConf
-	Local aStrOp
-	Local cExpr
-	Local cCampo    := ""
-	Local cOper     := ""
-	Local cTxtFil   := ""
-	Local cExpFil   := ""
-	Local cRet      := ""
-	Local cExprfil  := ""
-	Local aCampo    := DbStruct()
-	Local aCpo      := {}
-	Local nMatch    := 0
-	Local lConfirma := .f.
-	Local lOk       := .F.
-	Local x
-	Local oValBool
-	Local aValBool
-	Local cValBool
-
-	aStrOp := { "Igual a",; //'Equal to'
-	"Diferente de",; //'Different from'
-	"Menor que",; //'Less than'
-	"Menor ou igual a",; //'Less than or equal to'
-	"Maior que","Maior ou igual a",; //'Greater than'###'Greater than or equal to'
-	"Contém a expressão","Não contém a expressão",; //'Contain the expression'###'Do not contain'
-	"Está contido em",; //'Is contained in'
-	"Não está contido em" } //'Not contained into'
-
-	cFilter := ""
-
-	For x := 1 To Len(aCampo)
-		Aadd(aCpo,aCampo[x,1])
-	Next
-
-	DEFINE MSDIALOG oDlg FROM 020, 010 TO 205, 435 TITLE 'Construtor de Expressoes' PIXEL //'Expression constructor'
-
-	DEFINE SBUTTON oConf FROM 076, 142 TYPE 1 DISABLE OF oDlg;
-		ACTION ((If(lOk := (nMatch==0),nil,.F.),;
-		If(lOk,lOk := fExpressOk(@cExpFil),nil),If(lOk,lConfirma:=.T.,nil), If(lOk,oDlg:End(),nil)))
-
-		DEFINE SBUTTON FROM 076, 174 TYPE 2 ENABLE OF oDlg ACTION (oDlg:End())
-
-		@ 006, 140 SAY "Expressao" SIZE 055,007 OF oDlg PIXEL //'Expression:'
-		@ 014, 140 GET oExpr VAR cExpr SIZE 070, 009 OF oDlg Picture "@" PIXEL FONT oDlg:oFont
-
-		aValBool := {".T.",".F."}
-		@ 014, 140 COMBOBOX oValBool VAR cValBool ITEMS aValBool SIZE 070,009 OF oDlg PIXEL
-		oValBool:Hide()
-
-		@ 014, 005 COMBOBOX oCampo VAR cCampo ITEMS aCpo SIZE 060, 035 OF oDlg PIXEL ;
-			ON CHANGE ( If(aCampo[oCampo:nAt][2]=="L",(oExpr:Disable(),oExpr:Hide(),oValBool:Enable(),oValBool:Show()),;
-			(oValBool:nAt:=1,oValBool:Disable(),oValBool:Hide(),oExpr:Enable(),oExpr:Show(),BuildGet(oExpr,@cExpr,aCampo,oCampo,oDlg,,oOper:nAt))))
-
-		cExpr := fCalcField(oCampo:nAt,aCampo)
-		cOper := aStrOp[1]
-
-		@ 014, 070 COMBOBOX oOper VAR cOper ITEMS aStrOp SIZE 065, 035 OF oDlg PIXEL;
-			VALID If(aCampo[oCampo:nAt][2]=="L" .And. oOper:nAt<>1,((MsgStop("Operador Invalido","Erro"),.F.)),.T.); //"Operador invalido!"
-		ON CHANGE BuildGet(oExpr,@cExpr,aCampo,oCampo,oDlg,,oOper:nAt)
-
-		@ 006, 005 SAY "Campos" SIZE 039,007 OF oDlg PIXEL //'Fields:'
-		@ 006, 070 SAY "Operadores" SIZE 039,007 OF oDlg PIXEL //'Operators:'
-
-		@ 046, 005  SAY "Filtrar"  SIZE 53, 7 OF oDlg PIXEL //'Filter:'
-
-		@ 031, 005 BUTTON oBtnA PROMPT "Adicionar" SIZE 040, 011 OF oDlg PIXEL //'&Add'
-		oBtnA:bAction := {|lBool| lBool:=(aCampo[oCampo:nAt][2]=="L"), If(lBool,(cExpr:=cValBool,lBool:=(oOper:nAt==1)),lBool:=.T.),;
-			If(!lBool,MsgStop("Operador Invalido","Erro"),(oConf:SetEnable(.t.),;
-				cTxtFil := fExpToTexto(cTxtFil,Trim(cCampo),;
-				cOper,cExpr,.t.,@cExpFil,aCampo,oCampo:nAt,oOper:nAt,cValBool),;
-				cExpr := TamCampo(oCampo:nAt,aCampo),;
-				BuildGet(oExpr,@cExpr,aCampo,oCampo,oDlg,,oOper:nAt),;
-				oTxtFil:Refresh(),oBtnE:Enable(),oBtnOp:Disable(),;
-				oBtnOu:Enable(),oBtne:Refresh(),oBtnOu:Refresh(),;
-				oBtnExp:Disable(),oBtna:Disable(),oBtna:Refresh()))}
-
-			oBtnA:oFont := oDlg:oFont
-
-			@ 031, 050 BUTTON oBtn PROMPT "Limpa Filtro" SIZE 040, 011 OF oDlg PIXEL; //'&Clear Filter'
-			ACTION (oConf:SetEnable(.t.),cTxtFil := "",;
-				cExpFil := "",nMatch := 0,oTxtFil:Refresh(),;
-				oBtnA:Enable(),oBtnE:Disable(),oBtnOU:Disable(),;
-				oMatch:Disable(),oBtnOp:Enable(),oConf:Refresh(),oBtnExp:Enable(),oBtnExp:Refresh()) ; oBtn:oFont := oDlg:oFont
-
-			@ 031, 095 BUTTON oBtnExp PROMPT "Expressao" SIZE 040, 011 OF oDlg PIXEL ; //'&Expression'
-			ACTION (lRet:=ExprFiltro(@cTxtFil,@cExpFil),oTxtFil:Refresh(),;
-				If(lRet,oBtnOp:Disable(),oBtnOp:Enable()),If(lRet,oBtnExp:Disable(),oBtnExp:Enable()) ,;
-					If(lRet,oBtna:Disable(),oBtna:Enable()),;
-						If(lRet,oBtnE:Enable(),oBtnE:Disable()),;
-							If(lRet,oConf:SetEnable(.t.),oConf:SetEnable(.F.)),;
-								If(lRet,oBtnOu:Enable(),oBtnOu:Disable())) ;oBtnExp:oFont := oDlg:oFont
-
-								@ 053,005 GET oTxtFil VAR cTxtFil SIZE 205, 020 OF oDlg PIXEL MEMO COLOR CLR_BLACK,CLR_HGRAY READONLY
-
-								oTxtFil:bRClicked := {||AlwaysTrue()}
-
-								@ 025, 180 BUTTON oBtnOp PROMPT "("  SIZE 013,011 OF oDlg PIXEL ACTION (If(nMatch==0,oMatch:Enable(),nil),nMatch++,cTxtFil+= " ( ",cExpFil+="(",oTxtFil:Refresh()) ; oBtnOp:oFont := oDlg:oFont
-								@ 025, 193 BUTTON oMatch PROMPT ")" 	SIZE 013,011 OF oDlg PIXEL ACTION (nMatch--,cTxtFil+= " ) ",cExpFil+=")",If(nMatch==0,oMatch:Disable(),nil),oTxtFil:Refresh()) ; oMatch:oFont := oDlg:oFont
-								@ 038, 180 BUTTON oBtne	PROMPT " and " SIZE 013,011 OF oDlg PIXEL;
-									ACTION (cTxtFil+=" and ",cExpFil += ".and.",;
-									oTxtFil:Refresh(),oBtne:Disable(),oBtnou:Disable(),;
-									oBtnExp:Enable(),oBtnA:Enable(),oBtne:Refresh(),oBtnou:Refresh(),;
-									oBtnA:Refresh(),oBtnOp:Enable())
-
-								oBtne:oFont := oDlg:oFont
-
-								@ 038, 193 BUTTON oBtnOU PROMPT " or "	SIZE 013,011 OF oDlg PIXEL;
-									ACTION (cTxtFil+=" or ",cExpFil += ".or.",oTxtFil:Refresh(),;
-									oBtne:Disable(),oBtnou:Disable(),oBtnExp:Enable(),oBtnA:Enable(),;
-									oBtne:Refresh(),oBtnou:Refresh(),oBtna:Refresh(),oBtnOp:Enable())
-
-								oBtnou:oFont := oDlg:oFont
-
-								oMatch:Disable()
-								oBtnE:Disable()
-								oBtnOu:Disable()
-
-								ACTIVATE MSDIALOG oDlg CENTERED
-
-								If lConfirma
-									If cExpFil # Nil
-										cRet := cExpFil
-									EndIf
-									Return cRet
-								EndIf
-
-								Return Pad(cExprfil,255)
-
-//Teste generico de expressao
-Static Function fExpressOk(cExp,cMsg)
-	Local lOk	:= .T.
-	Local lVal  := NIL
-	Local oErro
-
-	oErro := ErrorBlock({|e| fShowErr(e,cMsg)})
-	BEGIN SEQUENCE
-		If !Empty(cExp)
-			lVal := &(cExp)
-			lOk := (lVal <> NIL)
-		Endif
-	END SEQUENCE
-	ErrorBlock(oErro)
-
-Return lOk
-
-//Calculo do Tamanho do Campo
-Static Function fCalcField(nAt,aCampo)
-	Local cRet := ""
-	If !Empty(nAt)
-		If aCampo[nAt,2] == "C"
-			cRet := Space(aCampo[nAt,3])
-		ElseIf aCampo[nAt,2] == "M"
-			cRet := Space(255)
-		ElseIf aCampo[nAt,2] == "N"
-			cRet := 0
-		ElseIf aCampo[nAt,2] == "D"
-			cRet := CTOD("  /  /  ")
-		EndIf
-	EndIf
-Return cRet
-
 
 // --------------------------------------------------------------------------------
 //Tela generica de Expressao
@@ -2893,39 +2957,6 @@ Static Function fGeraDTC()
 	FERASE("\cadzic\"+_cArquivo)
 Return nil
 
-User Function CADZIC()
-	Local lTemTabela := .F.
-	Local lTemCampo  := .F.
-	Private aRotAdic:={}
-
-	chkfile("ZIC",.F.)
-
-	lTemTabela := ( Select("ZIC") > 0 )
-
-	If lTemTabela
-		lTemCampo := ZIC->(FieldPos("ZIC_SQL")) > 0
-	EndIf
-
-	If lTemTabela .AND. lTemCampo
-		aadd(aRotAdic,{ 'Executar'   ,'u_ExecSQL()' , 0, 6})
-		SetKey(VK_F9, { || u_ExecSql() })
-		AxCadastro("ZIC","Cadastro de Consultas SQL",,Iif(FWIsAdmin( __cUserID ),".T.",".F."),aRotAdic)
-	Else
-		cMsg := "Para utilizar a rotina é necessário criar tabela: "
-		cMsg += "ZIC - Cadastro de Consultas SQL" + CRLF
-		cMsg += "ZIC_FILIAL (CHAR("+STRZERO(LEN(xFilial("SD2")),2,0)+")) => Filial" + CRLF
-		cMsg += "ZIC_CODIGO (CHAR(6)) => Codigo" + CRLF
-		cMsg += "ZIC_DESCR (CHAR(200)) => Descricao" + CRLF
-		cMsg += "ZIC_SQL (MEMO) => Script SQL" + CRLF
-		FWAlertError(cMsg, "Atenção")
-	EndIf
-
-Return nil
-
-User Function ExecSql()
-	u_CFGQSQL(ZIC->ZIC_SQL)
-Return nil
-
 Static Function fPerm(cFrase)
 	Local lReturn := .T.
 	Local j
@@ -3054,16 +3085,15 @@ User Function ConvCert()
 	Local _cArqKey  := space(100)
 	Local _cSenha   := space(100)
 	Local cRet      := space(100)
-
+	Local cBarra    := IIF(GetRemoteType()== 2,"/","\")
 	aPergs  := {}
 	aRet    := {}
 
-	_cArquivo := "\cert_cte\20382889.pfx"
-	_cArqCA   := "\cert_cte\20382889_ca"
-	_cArqCert := "\cert_cte\20382889_cert"
-	_cArqKey  := "\cert_cte\20382889_key"
-	_cSenha   := "50759273"
-
+	_cArquivo := Pad(cBarra + "novo_cert.pfx",150)
+	_cArqCA   := Pad(cBarra + "000001_ca",150)
+	_cArqCert := Pad(cBarra + "000001_cert",150)
+	_cArqKey  := Pad(cBarra + "000001_key",150)
+	_cSenha   := pad("senha@123",25)
 
 	aAdd( aPergs ,{6,"Arquivo PFX"   ,_cArquivo,"",,"", 80 ,.T.,"Arquivos .* |*.*","C:\",GETF_LOCALHARD})
 	aadd( aPergs ,{1,"Arquivo CA "   ,_cArqCA  ,"","","",".T.",80,.F.}) 	//
@@ -3071,8 +3101,12 @@ User Function ConvCert()
 	aadd( aPergs ,{1,"Arquivo Key "  ,_cArqKey ,"","","",".T.",80,.F.}) 	//
 	aadd( aPergs ,{1,"senha "        ,_cSenha  ,"","","",".T.",80,.F.}) 	//
 
-	If ParamBox(aPergs ,"Converte PFX para PEM",aRet,/*aButtons*/,/*lCentered*/,/*nPosX*/,/*nPosy*/,/*oDlgWizard*/,/*cLoad*/,.F./*lCanSave*/,.F./*lUserSave*/ )
-		PFX2PEM2(alltrim(aRet[1]), alltrim(aRet[5]), alltrim(aRet[2]), alltrim(aRet[3]), alltrim(aRet[4]), cRet )
+	If ParamBox(aPergs,"Converte PFX para PEM",aRet,,,,,,,)
+		If File(alltrim(aRet[1]))
+			PFX2PEM2(alltrim(aRet[1]), alltrim(aRet[5]), alltrim(aRet[2]), alltrim(aRet[3]), alltrim(aRet[4]), cRet )
+		Else
+			FwAlertError('Arquivo nao encontrado','Atencao')
+		EndIf
 	EndIf
 
 Return nil
@@ -3086,11 +3120,11 @@ Static Function PFX2PEM2(cArquivo, cPsw, cArqCA, cArqCERT, cArqKEY, cRet )
 	Default cArqKEY := ""
 	Default cRet := ""
 
-	cArquivo := AllTrim( cArquivo )
-	cPsw := AllTrim( cPsw )
-	cArqCA := AllTrim( cArqCA )
-	cArqCERT := AllTrim( cArqCERT )
-	cArqKEY := AllTrim( cArqKEY )
+	cArquivo  := AllTrim( cArquivo )
+	cPsw 	  := AllTrim( cPsw )
+	cArqCA    := AllTrim( cArqCA )
+	cArqCERT  := AllTrim( cArqCERT )
+	cArqKEY   := AllTrim( cArqKEY )
 
 	//Garante que os arquivos serão gerados com a extensão correta
 	If Right( Upper( cArqCA ), 4 ) != ".PEM"
@@ -3103,26 +3137,28 @@ Static Function PFX2PEM2(cArquivo, cPsw, cArqCA, cArqCERT, cArqKEY, cRet )
 		cArqKEY += ".pem"
 	Endif
 
+	cRet := ""
 	//Gera o arquivo de Certificado de Autorização
 	If PFXCA2PEM( cArquivo, cArqCA, @cError, cPsw )
-		//Gera o arquivo de Certificado de Cliente
-		If PFXCert2PEM( cArquivo, cArqCERT, @cError, cPsw )
-			//Gera o arquivo de Chave Privada
-			If ! PFXKey2PEM( cArquivo, cArqKEY, @cError, cPsw )
-				cRet := OemToAnsi("Erro ao extrair a chave privada. ") + cError //
-			Endif
-		Else
-			cRet := OemToAnsi("Erro ao extrair o Certificado de Cliente. ") + cError //
-		Endif
+		cRet += "CA extraído com sucesso." + CRLF
 	Else
-		cRet := OemToAnsi("Erro ao extrair o Certificado de Autorização. ") + cError //
+		cRet += "Erro ao extrair o CA. " + cError + CRLF
 	Endif
 
-	If !Empty(alltrim(cRet))
-		FwAlertError(cRet,"Erro!")
+	//Gera o arquivo de Certificado de Cliente
+	If PFXCert2PEM( cArquivo, cArqCERT, @cError, cPsw )
+		cRet += "Cert extraído com sucesso." + CRLF
 	Else
-		MsgInfo("Convertido com sucesso","INFO")
-	EndIf
+		cRet += "Erro ao extrair o Cert. " + cError + CRLF
+	Endif
+
+	If PFXKey2PEM( cArquivo, cArqKEY, @cError, cPsw )
+		cRet += "Key extraído com sucesso." + CRLF
+	Else
+		cRet += "Erro ao extrair o Key. " + cError + CRLF
+	Endif
+
+	MsgInfo(cRet,"INFO")
 
 Return .T.
 
@@ -3158,7 +3194,7 @@ WSMETHOD GET WSRECEIVE Query, Page, PageSize WSSERVICE QSQL
 
 	::SetContentType("application/json")
 
-	aRet := fRunQuery(Query, cAlias)
+	aRet := u_fRunQuery(Query, cAlias)
 
 	If !Eof() .AND. aRet[1]
 
@@ -3187,8 +3223,8 @@ WSMETHOD GET WSRECEIVE Query, Page, PageSize WSSERVICE QSQL
 
 		Do While !Eof()
 
-			If nRec == 0 
-				
+			If nRec == 0
+
 				oJsonObj := JsonObject():New()
 
 				For j:= 1 to FCount()
@@ -3201,22 +3237,22 @@ WSMETHOD GET WSRECEIVE Query, Page, PageSize WSSERVICE QSQL
 
 						oJsonObj[FieldName(j)] := 'RECDEL'
 
-					Else 
+					Else
 
 						cLabel := FWhttpEncode(GetSx3Cache(FieldName(j),"X3_TITULO"))
-					
+
 						If Empty(cLabel) .OR. cLabel == 'null'
 							cLabel := FieldName(j)
 						EndIf
-					
+
 						oJsonObj[FieldName(j)]   := cLabel
-					
-					EndIf 
+
+					EndIf
 				Next
 
 				aAdd(oResponse["labels"], oJsonObj)
 
-			EndIf 
+			EndIf
 
 			nRec++
 
@@ -3260,20 +3296,17 @@ WSMETHOD GET WSRECEIVE Query, Page, PageSize WSSERVICE QSQL
 
 Return lRet
 
-Static Function fRunQuery(Query,cAlias)
+User Function fRunQuery(Query,cAlias)
 	Local aRet   := {.T.,'Sucesso'}
 	Local oError := ErrorBlock({|e| aRet[1] := .F., aRet[2] := "Mensagem de Erro: " +chr(10)+ e:Description })
 
 	Begin Sequence
-		
-		If !("UPDATE") $ UPPER(Query) .AND. !("INSERT") $ UPPER(Query) .AND.  !("DELETE")  $ UPPER(Query)
+
+		If !(" INTO ") $ UPPER(Query)  .and. !("UPDATE") $ UPPER(Query) .AND. !("INSERT") $ UPPER(Query) .AND.  !("DELETE")  $ UPPER(Query)
 			dbUseArea(.T.,"TOPCONN",TcGenQry(,,Query),cAlias,.T.,.T.)
-		else 
-			nRes := TCSQLEXEC(Query)
-			If nRes <> 0 
-				aRet   := {.F.,'Falha na atualização'}
-			EndIf 
-		EndIf 
+		else
+			aRet   := {.T.,'Comando de atualização'}
+		EndIf
 
 		Return aRet
 	End Sequence
@@ -3284,12 +3317,12 @@ Return aRet
 
 User Function QSQLWEB()
 	FwCallApp("qsqlweb")
-Return nil 
+Return nil
 
 User Function LimpaXML(cTexto)
-Local cReturn := ''
-Local cLib    := '0123456789abcdefghijklmnopqrstuvxywz<>?/()\.,:=+-*^$#@![;] '
-Local j       := 0 
+	Local cReturn := ''
+	Local cLib    := '0123456789abcdefghijklmnopqrstuvxywz<>?/()\.,:=+-*^$#@![;] '
+	Local j       := 0
 
 	For j := 1 to Len(cTexto)
 
@@ -3297,8 +3330,904 @@ Local j       := 0
 
 		If cChar $ cLib .OR. cChar $ Upper(cLib) .OR. cChar == '"' .OR. cChar == "'"
 			cReturn += cChar
-		EndIf 
+		EndIf
 
-	Next 
+	Next
 
 Return cReturn
+
+User Function CriaZIC()
+
+	//RPCSetEnv("99","01","admin"," ","","",{})
+
+	Begin Transaction
+
+		DbSelectArea("SX3")
+
+		Reclock("SX3",.T.)
+		X3_ARQUIVO  := "ZIC"
+		X3_ORDEM 	:= "01"
+		X3_CAMPO 	:= "ZIC_FILIAL"
+		X3_TIPO 	:= "C"
+		X3_TAMANHO 	:= Len(cFilAnt)
+		X3_DECIMAL 	:= 0
+		X3_TITULO 	:= "Filial"
+		X3_TITSPA 	:= "Filial"
+		X3_TITENG 	:= "Filial"
+		X3_DESCRIC 	:= "Filial"
+		X3_DESCSPA 	:= "Filial"
+		X3_DESCENG 	:= "Filial"
+		X3_USADO 	:= "x       x       x       x       x       x       x       x       x       x       x       x       x       x       x x     "
+		X3_RELACAO 	:= " "
+		X3_NIVEL 	:= 0
+		X3_RESERV 	:= "xxxxxx x        "
+		X3_CHECK 	:= " "
+		X3_BROWSE 	:= "S"
+		X3_VISUAL 	:= "A"
+		X3_CONTEXT 	:= "R"
+		X3_MODAL 	:= "1"
+		X3_ORTOGRA  := "N"
+		X3_IDXFLD   := "N"
+		MsUnlock("SX3")
+
+		Reclock("SX3",.T.)
+		X3_ARQUIVO  := "ZIC"
+		X3_ORDEM 	:= "02"
+		X3_CAMPO 	:= "ZIC_CODIGO"
+		X3_TIPO 	:= "C"
+		X3_TAMANHO 	:= 06
+		X3_DECIMAL 	:= 0
+		X3_TITULO 	:= "Codigo"
+		X3_TITSPA 	:= "Codigo"
+		X3_TITENG 	:= "Codigo"
+		X3_DESCRIC 	:= "Codigo"
+		X3_DESCSPA 	:= "Codigo"
+		X3_DESCENG 	:= "Codigo"
+		X3_USADO 	:= "x       x       x       x       x       x       x       x       x       x       x       x       x       x       x x     "
+		X3_RELACAO 	:= 'GetSxeNum("ZIC","ZIC_CODIGO")'
+		X3_NIVEL 	:= 0
+		X3_RESERV 	:= "xxxxxx x "
+		X3_CHECK 	:= " "
+		X3_BROWSE 	:= "S"
+		X3_VISUAL 	:= "A"
+		X3_CONTEXT 	:= "R"
+		X3_MODAL 	:= "1"
+		X3_ORTOGRA  := "N"
+		X3_IDXFLD   := "N"
+		MsUnlock("SX3")
+
+		Reclock("SX3",.T.)
+		X3_ARQUIVO  := "ZIC"
+		X3_ORDEM 	:= "03"
+		X3_CAMPO 	:= "ZIC_DESCR"
+		X3_TIPO 	:= "C"
+		X3_TAMANHO 	:= 200
+		X3_DECIMAL 	:= 0
+		X3_TITULO 	:= "Descricao"
+		X3_TITSPA 	:= "Descricao"
+		X3_TITENG 	:= "Descricao"
+		X3_DESCRIC 	:= "Descricao"
+		X3_DESCSPA 	:= "Descricao"
+		X3_DESCENG 	:= "Descricao"
+		X3_USADO 	:= "x       x       x       x       x       x       x       x       x       x       x       x       x       x       x x     "
+		X3_RELACAO 	:= " "
+		X3_NIVEL 	:= 0
+		X3_RESERV 	:= "xxxxxx x "
+		X3_CHECK 	:= " "
+		X3_BROWSE 	:= "S"
+		X3_VISUAL 	:= "A"
+		X3_CONTEXT 	:= "R"
+		X3_MODAL 	:= "1"
+		X3_ORTOGRA  := "N"
+		X3_IDXFLD   := "N"
+		MsUnlock("SX3")
+
+		Reclock("SX3",.T.)
+		X3_ARQUIVO  := "ZIC"
+		X3_ORDEM 	:= "04"
+		X3_CAMPO 	:= "ZIC_SQL"
+		X3_TIPO 	:= "M"
+		X3_TAMANHO 	:= 10
+		X3_DECIMAL 	:= 0
+		X3_TITULO 	:= "Script SQL"
+		X3_TITSPA 	:= "Script SQL"
+		X3_TITENG 	:= "Script SQL"
+		X3_DESCRIC 	:= "Script SQL"
+		X3_DESCSPA 	:= "Script SQL"
+		X3_DESCENG 	:= "Script SQL"
+		X3_USADO 	:= "x       x       x       x       x       x       x       x       x       x       x       x       x       x       x x     "
+		X3_RELACAO 	:= " "
+		X3_NIVEL 	:= 0
+		X3_RESERV 	:= "xxxxxx x "
+		X3_CHECK 	:= " "
+		X3_BROWSE 	:= "S"
+		X3_VISUAL 	:= "A"
+		X3_CONTEXT 	:= "R"
+		X3_MODAL 	:= "1"
+		X3_ORTOGRA  := "N"
+		X3_IDXFLD   := "N"
+		MsUnlock("SX3")
+
+		Reclock("SX3",.T.)
+		X3_ARQUIVO  := "ZIC"
+		X3_ORDEM 	:= "05"
+		X3_CAMPO 	:= "ZIC_PERM"
+		X3_TIPO 	:= "M"
+		X3_TAMANHO 	:= 10
+		X3_DECIMAL 	:= 0
+		X3_TITULO 	:= "Permissoes"
+		X3_TITSPA 	:= "Permissoes"
+		X3_TITENG 	:= "Permissoes"
+		X3_DESCRIC 	:= "Permissoes"
+		X3_DESCSPA 	:= "Permissoes"
+		X3_DESCENG 	:= "Permissoes"
+		X3_USADO 	:= "x       x       x       x       x       x       x       x       x       x       x       x       x       x       x x     "
+		X3_RELACAO 	:= " "
+		X3_NIVEL 	:= 0
+		X3_RESERV 	:= "xxxxxx x "
+		X3_CHECK 	:= " "
+		X3_BROWSE 	:= "S"
+		X3_VISUAL 	:= "A"
+		X3_CONTEXT 	:= "R"
+		X3_MODAL 	:= "1"
+		X3_ORTOGRA  := "N"
+		X3_IDXFLD   := "N"
+		MsUnlock("SX3")
+
+		DbSelectArea("SX2")
+		Reclock("SX2",.T.)
+		X2_CHAVE    := "ZIC"
+		X2_PATH     := "\"
+		X2_ARQUIVO  := "ZIC"+ FWGrpCompany() + '0'
+		X2_NOME 	:= "Cadastro SQL"
+		X2_NOMESPA  := "Cadastro SQL"
+		X2_NOMEENG  := "Cadastro SQL"
+		X2_ROTINA   := " "
+		X2_MODO     := "C"
+		X2_MODOUN   := "C"
+		X2_MODOEMP  := "C"
+		X2_AUTREC   := "1"
+		X2_TAMFIL   := 2
+		X2_TAMUN 	:= 0
+		X2_TAMEMP 	:= 2
+		X3_ORTOGRA  := "N"
+		X3_IDXFLD   := "N"
+		MsUnlock("SX2")
+
+		DbSelectArea("SIX")
+		Reclock("SIX",.T.)
+		INDICE 		:= "ZIC"
+		ORDEM 		:= "1"
+		CHAVE 		:= "ZIC_FILIAL+ZIC_CODIGO"
+		DESCRICAO 	:= "Codigo"
+		DESCSPA 	:= "Codigo"
+		DESCENG 	:= "Codigo"
+		PROPRI 		:= "U"
+		NICKNAME 	:= "ZIC01"
+		X3_ORTOGRA  := "N"
+		X3_IDXFLD   := "N"
+		MsUnlock("SIX")
+
+		ChkFile("ZIC", .F.)
+
+	End Transaction
+
+Return nil
+
+
+/*/{Protheus.doc} User Function ZicPermU
+	Cadastro de permissões de Usuários
+	@type  Function
+	@author user
+	@since 26/07/2023
+	@version version
+	@param param_name, param_type, param_descr
+	@return return_var, return_type, return_description
+	@example
+	(examples)
+	@see (links_or_references)
+	/*/
+
+User Function ZicPermU()
+	Local j 			:= 0
+	Local aRet 			:= {}
+	Default _cArea  := GetNextAlias()
+	Default lJob := .F.
+	Default lVis := .F.
+	//Objetos e componentes gerais
+	Private oDlgExp
+	Private oFwLayer
+	Private oPanTitulo
+	Private oPanGrid
+	Private oPanGrid2
+	Private oPanCheck
+	Private oPanTotal
+	Private cMascara := "@E 99,999,999"
+	//Tamanho da janela
+	Private aSize := FWGetDialogSize( oMainWnd ) 
+	Private nJanLarg := iif(lJob,1600/1.40,aSize[3])
+	Private nJanAltu := iif(lJob,800/1.40,aSize[4])
+	//Fontes
+	Private cFontUti    := "Tahoma"
+	Private oFontMod    := TFont():New(cFontUti, , -22)
+	Private oFontSub    := TFont():New(cFontUti, , -20)
+	Private oFontBrw    := TFont():New(cFontUti, , -15)
+	Private oFontSubN   := TFont():New(cFontUti, , -20, , .T.)
+	Private oFontBtn    := TFont():New(cFontUti, , -14)
+	Private oFontSay    := TFont():New(cFontUti, , -12)
+	//Grid
+	Private aDados1 	:= {}
+	Private aDadosMark 	:= {}
+	Private lProcessa   := .F.
+	Private oFBrowse
+	Private oFBrowse2
+
+	aDisp := {}
+	AADD(aDisp,{"C","Usuario"    ,"USR_CODIGO"    , "@!",15,0,"C"}) // 01
+	AADD(aDisp,{"C","Nome"   	 ,"USR_NOME"      , "@!",40,0,"C"}) // 02
+	AADD(aDisp,{"C","Depto"      ,"USR_DEPTO"     , "@!",20,0,"C"}) // 03
+
+	//busca os dados das grids
+	BeginSql Alias _cArea
+
+		SELECT
+			USR_CODIGO, 
+			USR_NOME, 
+			USR_DEPTO
+		FROM
+			SYS_USR
+		WHERE
+			USR_MSBLQL = '2'
+		ORDER BY USR_NOME
+
+	EndSql
+
+	aDados1 := {}
+
+	DbSelectArea(_cArea)
+
+	WHILE !eof()
+
+		aLinha := {}
+
+		For j:= 1 to Len(aDisp)
+
+			AADD(aLinha,FieldGet(FieldPos(aDisp[j,3])))
+
+		Next
+
+		AADD(aDados1	, aLinha)
+		AADD(aDadosMark	, "U"+ AllTrim(USR_CODIGO) $ (ZIC->ZIC_PERM) )
+
+		dbSelectArea(_cArea)
+		dbSkip()
+
+	ENDDO
+
+	//Cria a janela
+	DEFINE MSDIALOG oDlgExp TITLE "Usuarios"  FROM 0, 0 TO nJanAltu, nJanLarg PIXEL
+
+	//Criando a camada
+	oFwLayer := FwLayer():New()
+	oFwLayer:init(oDlgExp,.F.)
+
+	//Adicionando 3 linhas, a de título, a grid e a do rodapé (margem inferior)
+	// PRIMEIRO TITULO
+	oFWLayer:addLine("BROWSE_LINHA_1" , 90, .F.)
+	oFWLayer:addCollumn("BROWSE",   100, .T., "BROWSE_LINHA_1")
+	oFWLayer:addLine("BROWSE_LINHA_2" , 10, .F.)
+	oFWLayer:addCollumn("RODAPE",   100, .T., "BROWSE_LINHA_2")
+
+	oPanGrid   := oFWLayer:GetColPanel("BROWSE",    "BROWSE_LINHA_1")
+	oPanRoda   := oFWLayer:GetColPanel("RODAPE",    "BROWSE_LINHA_2")
+
+	oBtnStatus := TButton():New(001, 080, "Confirma", oPanRoda, {|| lProcessa := .T., oDlgExp:End()}  , 40, 018, , oFontBtn, , .T., , , , , , )
+	oBtnSair   := TButton():New(001, 020, "Fechar"  , oPanRoda, {|| lProcessa := .F., oDlgExp:End()}  , 40, 018, , oFontBtn, , .T., , , , , , )
+
+	//Cria a grid
+	oFBrowse := FWFormBrowse():New()
+
+	oFBrowse:AddMarkColumns({|| fLegenda()}, {|| fMarca(oFBrowse,1)}, {|| fMarca(oFBrowse,2)})
+
+	nPos := 0
+
+	fAddCampos(oFBrowse,aDisp)
+
+	aSeek := {}
+	AAdd(aSeek ,{ "Nome", {;
+		{"" /*F3*/ ,"C" /*tipo*/, 40 /*tamanho*/ , 0 /* decimal */ , "Nome", "@!"}};
+		})
+
+	oFBrowse:SetSeek({|x| fBuscar(x,2)}, aSeek)
+
+	oFBrowse:DisableConfig()
+	oFBrowse:DisableReport()
+	oFBrowse:SetDataArray()
+	oFBrowse:SetArray(aDados1)
+	oFBrowse:SetOwner(oPanGrid)
+
+	oFBrowse:Activate()
+
+	Activate MsDialog oDlgExp Centered
+
+	If lProcessa
+
+		cSelUsers := '#USER_START#'
+
+		For j:= 1 to Len(aDadosMark)
+
+			If aDadosMark[j]
+				cSelUsers += 'U'+alltrim((aRet,aDados1[j, 01]))+";"
+			EndIf
+
+		Next
+
+		cSelUsers += '#USER_END__#'
+
+		nStartGroup := At('#GROUP_START#'  ,ZIC->ZIC_PERM)
+		nEndGroup   := At('#GROUP_END__#'  ,ZIC->ZIC_PERM)
+
+		cSelGroups  := Substr(ZIC->ZIC_PERM,nStartGroup+12,nEndGroup-13)
+
+		DbSelectArea("ZIC")
+		Reclock("ZIC",.F.)
+		Replace ZIC_PERM With cSelUsers + '#GROUP_START#' + cSelGroups + '#GROUP_END__#'
+		MsUnLock("ZIC")
+
+	EndIf
+
+	(_cArea)->(dbCloseArea())
+
+Return aRet
+
+/* Busca chave no browse */ 
+
+Static Function fBuscar(oBusca,nCol)
+	Local j := 0
+	Local lAchou := .F.
+
+	For j :=1 to len(aDados1)
+		If UPPER(Alltrim(oBusca:cseek)) $ UPPER(AllTrim(aDados1[j,nCol]))
+			lAchou := .T.
+			Exit
+		EndIf
+	Next
+
+	If !lAchou
+		FwAlertError("Não Encontrado","Atenção")
+		j := oFBrowse:nAT
+	EndIf
+
+Return j
+
+Static Function fAddCampos(oObj, aDisp)
+	Local nCampo
+
+	For nCampo := 1 to Len(aDisp)
+
+		If "C" $ aDisp[nCampo,1]
+
+			cTitulo  := aDisp[nCampo,2]
+			cPicture := aDisp[nCampo,4]
+			nTam     := aDisp[nCampo,5]
+			nDec     := aDisp[nCampo,6]
+			cTipo    := aDisp[nCampo,7]
+
+			nPos++
+
+			bDado := &("{|| aDados1[oFBrowse:nAT,"+cValToChar(nPos)+"]}")
+			oObj:addColumn({cTitulo /* Título da coluna */ , ;
+				bDado /* Code-Block de carga dos dados */ , ;
+				cTipo /* Tipo de dados */, ;
+				cPicture /* Máscara */ ,;
+				1 /* Alinhamento (0=Centralizado, 1=Esquerda ou 2=Direita) */,;
+				nTam /* Tamanho */,;
+				nDec /* Decimal */,;
+				.T. /* Indica se permite a edição */ ,;
+                    /* Code-Block de validação da coluna após a edição */,;
+				.F. /* Indica se exibe imagem */,;
+				,;
+				aDisp[nCampo,3] /* Variável a ser utilizada na edição (ReadVar) */,;
+                    /* Code-Block de execução do clique no header */,;
+				.F. /* Indica se a coluna está deletada */,;
+				.T. /* Indica se a coluna será exibida nos detalhes do Browse */,;
+                    /* Opções de carga dos dados (Ex: 1=Sim, 2=Não) */,;
+				aDisp[nCampo,3] /* Id da coluna */,;
+				.F. /* Indica se a coluna é virtual */ })
+
+		EndIf
+
+	Next
+
+Return nil
+
+Static Function fLegenda()
+	Local cRet := ' '
+
+	If aDadosMark[oFBrowse:nAT]
+		cRet := "checked"
+	Else
+		cRet := "unchecked"
+	EndIf
+
+Return cRet
+
+/*/{Protheus.doc} User Function ZicPermG
+	Cadastro de permissões de Grupos
+	@type  Function
+	@author user
+	@since 26/07/2023
+	@version version
+	@param param_name, param_type, param_descr
+	@return return_var, return_type, return_description
+	@example
+	(examples)
+	@see (links_or_references)
+	/*/
+
+User Function ZicPermG()
+	Local j 			:= 0
+	Local aRet 			:= {}
+	Default _cArea  := GetNextAlias()
+	Default lJob := .F.
+	Default lVis := .F.
+	//Objetos e componentes gerais
+	Private oDlgExp
+	Private oFwLayer
+	Private oPanTitulo
+	Private oPanGrid
+	Private oPanGrid2
+	Private oPanCheck
+	Private oPanTotal
+	Private cMascara := "@E 99,999,999"
+	//Tamanho da janela
+	Private aSize := MsAdvSize(.F.)
+	Private nJanLarg := iif(lJob,1600/1.40,aSize[3])
+	Private nJanAltu := iif(lJob,800/1.40,aSize[4])
+	//Fontes
+	Private cFontUti    := "Tahoma"
+	Private oFontMod    := TFont():New(cFontUti, , -22)
+	Private oFontSub    := TFont():New(cFontUti, , -20)
+	Private oFontBrw    := TFont():New(cFontUti, , -15)
+	Private oFontSubN   := TFont():New(cFontUti, , -20, , .T.)
+	Private oFontBtn    := TFont():New(cFontUti, , -14)
+	Private oFontSay    := TFont():New(cFontUti, , -12)
+	//Grid
+	Private aDados1 	:= {}
+	Private aDadosMark 	:= {}
+	Private lProcessa   := .F.
+	Private oFBrowse
+	Private oFBrowse2
+
+	aDisp := {}
+	AADD(aDisp,{"C","Grupo"    		,"GR__ID"    , "@!",15,0,"C"}) // 01
+	AADD(aDisp,{"C","Coodigo"   	,"GR__CODIGO"      , "@!",40,0,"C"}) // 02
+	AADD(aDisp,{"C","Descricao"     ,"GR__NOME"     , "@!",20,0,"C"}) // 03
+
+	//busca os dados das grids
+	BeginSql Alias _cArea
+
+		SELECT 
+			GR__ID, 
+			GR__CODIGO, 
+			GR__NOME 
+		FROM SYS_GRP_GROUP
+		WHERE GR__MSBLQL = '2'
+		ORDER BY GR__CODIGO 
+
+	EndSql
+
+	aDados1 := {}
+
+	DbSelectArea(_cArea)
+
+	WHILE !eof()
+
+		aLinha := {}
+
+		For j:= 1 to Len(aDisp)
+
+			AADD(aLinha,FieldGet(FieldPos(aDisp[j,3])))
+
+		Next
+
+		AADD(aDados1	, aLinha)
+		AADD(aDadosMark	, "G"+ AllTrim(GR__ID) $ (ZIC->ZIC_PERM) )
+
+		dbSelectArea(_cArea)
+		dbSkip()
+
+	ENDDO
+
+	//Cria a janela
+	DEFINE MSDIALOG oDlgExp TITLE "Grupos"  FROM 0, 0 TO nJanAltu, nJanLarg PIXEL
+
+	//Criando a camada
+	oFwLayer := FwLayer():New()
+	oFwLayer:init(oDlgExp,.F.)
+
+	//Adicionando 3 linhas, a de título, a grid e a do rodapé (margem inferior)
+	// PRIMEIRO TITULO
+	oFWLayer:addLine("BROWSE_LINHA_1" , 90, .F.)
+	oFWLayer:addCollumn("BROWSE",   100, .T., "BROWSE_LINHA_1")
+	oFWLayer:addLine("BROWSE_LINHA_2" , 10, .F.)
+	oFWLayer:addCollumn("RODAPE",   100, .T., "BROWSE_LINHA_2")
+
+	oPanGrid   := oFWLayer:GetColPanel("BROWSE",    "BROWSE_LINHA_1")
+	oPanRoda   := oFWLayer:GetColPanel("RODAPE",    "BROWSE_LINHA_2")
+
+	oBtnStatus := TButton():New(001, 080, "Confirma", oPanRoda, {|| lProcessa := .T., oDlgExp:End()}  , 40, 018, , oFontBtn, , .T., , , , , , )
+	oBtnSair   := TButton():New(001, 020, "Fechar"  , oPanRoda, {|| lProcessa := .F., oDlgExp:End()}  , 40, 018, , oFontBtn, , .T., , , , , , )
+	oFBrowse := FWFormBrowse():New()
+	oFBrowse:AddMarkColumns({|| fLegenda()}, {|| fMarca(oFBrowse,1)}, {|| fMarca(oFBrowse,2)})
+
+	nPos := 0
+
+	fAddCampos(oFBrowse,aDisp)
+
+	aSeek := {}
+	AAdd(aSeek ,{ "Nome", {;
+		{"" /*F3*/ ,"C" /*tipo*/, 40 /*tamanho*/ , 0 /* decimal */ , "Nome", "@!"}};
+		})
+
+	oFBrowse:SetSeek({|x| fBuscar(x,3)}, aSeek)
+
+	oFBrowse:DisableConfig()
+	oFBrowse:DisableReport()
+	oFBrowse:SetDataArray()
+	oFBrowse:SetArray(aDados1)
+	oFBrowse:SetOwner(oPanGrid)
+
+	oFBrowse:Activate()
+
+	Activate MsDialog oDlgExp Centered
+
+	If lProcessa
+
+		cSelGroups := '#GROUP_START#'
+
+		For j:= 1 to Len(aDadosMark)
+
+			If aDadosMark[j]
+				cSelGroups += 'G'+alltrim((aRet,aDados1[j, 01]))+";"
+			EndIf
+
+		Next
+
+		cSelGroups += '#GROUP_END__#'
+
+		nStartUser := At('#USER_START#',ZIC->ZIC_PERM)
+		nEndUser   := At('#USER_END__#',ZIC->ZIC_PERM)
+
+		cSelUsers := Substr(ZIC->ZIC_PERM,nStartUser+12,nEndUser-13)
+
+		DbSelectArea("ZIC")
+		Reclock("ZIC",.F.)
+		Replace ZIC_PERM With '#USER_START#'+ cSelUsers + '#USER_END__#' + cSelGroups
+		MsUnLock("ZIC")
+
+	EndIf
+
+	(_cArea)->(dbCloseArea())
+
+Return aRet
+
+Static Function fMarca(oBrow, nCheck)
+	Local j
+
+	If nCheck == 1 // um item
+		aDadosMark[oFBrowse:nAT] := !aDadosMark[oFBrowse:nAT]
+	Else // all
+		For j := 1 to Len(aDados1)
+			aDadosMark[j] := !aDadosMark[j]
+		Next
+		oBrow:Refresh()
+	EndIf
+
+Return nil
+
+User Function CADZIC()
+	Local aArea   := GetArea()
+	Local oBrowse
+	Local lTemTabela := .F.
+	Local lTemCampo  := .F.
+	Local lTemPerm   := .F.
+	Private aRotina := {}
+
+	chkfile("ZIC",.F.)
+
+	lTemTabela := ( Select("ZIC") > 0 )
+
+	SetKey(VK_F9, { || u_ExecSql() })
+
+	If lTemTabela
+		lTemCampo := ZIC->(FieldPos("ZIC_SQL")) > 0
+		lTemPerm  := ZIC->(FieldPos("ZIC_PERM")) > 0
+	EndIf
+
+	If !lTemTabela
+		cMsg := "Para utilizar a rotina é necessário criar tabela: "
+		cMsg += "ZIC - Cadastro de Consultas SQL" + CRLF
+		cMsg += "ZIC_FILIAL (CHAR("+STRZERO(LEN(xFilial("SD2")),2,0)+")) => Filial" + CRLF
+		cMsg += "ZIC_CODIGO (CHAR(6)) => Codigo" + CRLF
+		cMsg += "ZIC_DESCR (CHAR(200)) => Descricao" + CRLF
+		cMsg += "ZIC_SQL (MEMO) => Script SQL" + CRLF
+		cMsg += "ZIC_PERM (MEMO) => Permissoes" + CRLF
+		FWAlertError(cMsg, "Atenção")
+		Return .F.
+	EndIf
+
+	//Definicao do menu
+	aRotina := MenuDef()
+
+	//Instanciando o browse
+	oBrowse := FWMBrowse():New()
+	oBrowse:SetAlias("ZIC")
+	aFields := {"ZIC_CODIGO","ZIC_DESCR"}
+	oBrowse:SetOnlyFields(aFields)
+	oBrowse:SetDescription("Cadastro de Consultas SQL")
+	oBrowse:DisableDetails()
+	oBrowse:DisableReport()
+
+	//Ativa a Browse
+	oBrowse:Activate()
+
+	RestArea(aArea)
+
+Return Nil
+
+/*/{Protheus.doc} User Function ExecSql
+	Executa query dentro do browse da tabela ZIC
+	@type  Function
+	@author user
+	@since 26/07/2023
+	@version version
+	@param param_name, param_type, param_descr
+	@return return_var, return_type, return_description
+	@example
+	(examples)
+	@see (links_or_references)
+	/*/
+
+User Function ExecSql()
+	Local j as numeric
+	Local lAcesso := .F.
+	Local aGrupos := UsrRetGrp(PswChave(RetCodUsr()),RetCodUsr())
+
+	If Empty(ZIC->ZIC_PERM)
+		lAcesso := .T.
+	Else
+		If "U"+PswChave(RetCodUsr()) $ (ZIC->ZIC_PERM)
+			lAcesso := .T.
+		Else
+
+			For j:= 1 to Len(aGrupos)
+
+				If "G"+aGrupos[j] $ (ZIC->ZIC_PERM)
+					lAcesso := .T.
+					Exit
+				EndIf
+			Next
+
+			If !lAcesso
+				FwAlertError("Usuário sem acesso","Atenção")
+			EndIf
+
+		EndIf
+	EndIf
+
+	If lAcesso
+		u_CFGQSQL(ZIC->ZIC_SQL)
+	EndIf
+
+Return nil
+
+
+Static Function MenuDef()
+	Local aRotina := {}
+
+	ADD OPTION aRotina TITLE "Executar"   ACTION "u_ExecSQL"     OPERATION MODEL_OPERATION_UPDATE ACCESS 0 //OPERATION 5
+
+	IF FWIsAdmin( __cUserID )
+		ADD OPTION aRotina TITLE "Visualizar" ACTION "VIEWDEF.QSQL" OPERATION MODEL_OPERATION_VIEW   ACCESS 0 //OPERATION 1
+		ADD OPTION aRotina TITLE "Incluir"    ACTION "VIEWDEF.QSQL" OPERATION MODEL_OPERATION_INSERT ACCESS 0 //OPERATION 3
+		ADD OPTION aRotina TITLE "Alterar"    ACTION "VIEWDEF.QSQL" OPERATION MODEL_OPERATION_UPDATE ACCESS 0 //OPERATION 4
+		ADD OPTION aRotina TITLE "Excluir"    ACTION "VIEWDEF.QSQL" OPERATION MODEL_OPERATION_DELETE ACCESS 0 //OPERATION 5
+		ADD OPTION aRotina TITLE "Usuarios"   ACTION "U_ZicPermU" OPERATION MODEL_OPERATION_UPDATE ACCESS 0 //OPERATION 5
+		ADD OPTION aRotina TITLE "Grupos"     ACTION "U_ZicPermG" OPERATION MODEL_OPERATION_UPDATE ACCESS 0 //OPERATION 5
+	EndIf
+
+Return aRotina
+
+Static Function ModelDef()
+	Local oModel
+	Local oStr1:= FWFormStruct( 1, 'ZIC', /*bAvalCampo*/,/*lViewUsado*/ ) // Construção de uma estrutura de dados
+
+	oModel := MPFormModel():New('Consulta SQL', /*bPreValidacao*/, /* botao OK => */ { | oModel | AntesGRV( oModel ) } , /*{ | oMdl | MVC001C( oMdl ) }*/ ,, /*bCancel*/ )
+	oModel:SetDescription('Consulta SQL')
+
+	// Adiciona ao modelo uma estrutura de formulário de edição por campo
+	oModel:addFields('CamposZIC',,oStr1,{|oModel| Validar(oModel)},,)
+
+	//Define a chave primaria utilizada pelo modelo
+	oModel:SetPrimaryKey({'ZIC_FILIAL', 'ZIC_NUM' })
+
+	// Adiciona a descricao do Componente do Modelo de Dados
+	oModel:getModel('CamposZIC'):SetDescription('TabelaZIC')
+
+Return oModel
+
+Static Function ViewDef()
+	Local oView
+	Local oModel := ModelDef()
+	Local oStr1:= FWFormStruct(2, 'ZIC')
+
+	// Cria o objeto de View
+	oView := FWFormView():New()
+
+	// Define qual o Modelo de dados será utilizado
+	oView:SetModel(oModel)
+
+	//Adiciona no nosso View um controle do tipo FormFields(antiga enchoice)
+	oView:AddField('Formulario' , oStr1,'CamposZIC' )
+
+	IF !FWIsAdmin( __cUserID )
+		oStr1:RemoveField( 'ZIC_PERM' )
+	EndIf
+
+	// Criar um "box" horizontal para receber algum elemento da view
+	oView:CreateHorizontalBox( 'PAI', 100)
+
+	// Relaciona o ID da View com o "box" para exibicao
+	oView:SetOwnerView('Formulario','PAI')
+	oView:EnableTitleView('Formulario' , 'Consulta SQL' )
+	oView:SetViewProperty('Formulario' , 'SETCOLUMNSEPARATOR', {10})
+
+	//Força o fechamento da janela na confirmação
+	oView:SetCloseOnOk({||.T.})
+
+Return oView
+
+Static Function Validar( oModel )
+Return .T.
+
+Static Function AntesGrv(oModel)
+Return .T.
+
+User Function fCheckPrw()
+	Local cDiretor := space(400)
+	Local aFiles   := {}
+	Local nI 	   := 0
+	Local aReturn  := {}
+	Local aPergs   := {}
+	Local aRet 	   := {}
+	Local aCabec   := {}
+
+	cPasta := cDiretor
+	cArqPerg := "ARQPRW"
+
+	aAdd(aPergs,{6,"Pasta fontes",cDiretor,"",,"", 90 ,.T.,"Arquivos .prw |*.prw","C:\",nOR( GETF_LOCALHARD, GETF_LOCALFLOPPY, GETF_RETDIRECTORY )})
+
+	If !ParamBox(aPergs,"Parametros",aRet,,,,,,,cArqPerg,.T.,.T.)
+		Return {}
+	EndIf
+
+	cDiretor := aRet[1]
+
+	aFiles := fGetFiles( Alltrim(aRet[1]) )
+
+	aSort(aFiles,,, {|x,y| x[1] < y[1]})
+
+	aDados := {}
+	For nI := 1 to Len(aFiles)
+		aDadosRPO := GetAPOInfo(aFiles[nI,1])
+
+		If Len(aDadosRPO)>0
+			cDataRPO := aDadosRPO[4]
+			cHoraRPO := aDadosRPO[5]
+
+			If cDataRpo == aFiles[nI,3] .AND. cHoraRPO == aFiles[nI,4]
+				cStatus := "Atualizado"
+			Else
+				cStatus := "Desatualizado"
+			EndIf
+
+		Else
+			cDataRPO := CTOD("")
+			cHoraRPO := ""
+			cStatus  := ""
+		EndIf
+
+		AADD(aDados,{"LBOK",aFiles[nI,1],aFiles[nI,2],aFiles[nI,3],aFiles[nI,4],cDataRPO,cHoraRPO,cStatus,.F.})
+
+	Next
+
+	AADD(aCabec,{""				, "CHECKBOL"	,"@BMP"		,02,0,,,"C",,"V",,,,"V","S"})
+	AADD(aCabec,{"Arquivo"		, "Arquivo"		,"@!"		,20,0,,,"C",,"R",,,,,})
+	AADD(aCabec,{"Tamanho"		, "Pasta"		,"@!"		,15,0,,,"C",,"R",,,,,})
+	AADD(aCabec,{"Data"			, "Data"		,"@!"		,10,0,,,"C",,"R",,,,,})
+	AADD(aCabec,{"Hora"			, "Hora"		,"@!"		,10,0,,,"C",,"R",,,,,})
+	AADD(aCabec,{"DataRPO"		, "DataRPO"		,"@!"		,10,0,,,"C",,"R",,,,,})
+	AADD(aCabec,{"HoraRPO"		, "HoraRPO"		,"@!"		,10,0,,,"C",,"R",,,,,})
+	AADD(aCabec,{"Status"		, "Status"		,"@!"		,10,0,,,"C",,"R",,,,,})
+
+	aRet := fMarkArray(aCabec,aDados)
+
+	If Len(aRet) == 0
+		Return {}
+	EndIf
+
+Return aReturn
+
+Static Function fMarkArray(aCabec,aColsDados)
+	Local nOpca2  := 2
+
+	DEFINE MSDIALOG oDlgTemp TITLE "Escolha" FROM 033,009  TO 533,678 PIXEL
+
+	oGetDados := MsNewGetDados():New(035,001,240,335, GD_UPDATE, , , , {'CHECKBOL'}, 0, 9999, , , , oDlgTemp, aCabec, aColsDados,,)
+	oGetDados:oBrowse:bLDblClick := {|| oGetDados:EditCell(), oGetDados:aCols[oGetDados:nAt,1] := Iif(oGetDados:aCols[oGetDados:nAt,1] == 'LBOK','LBNO','LBOK')}
+	oGetDados:oBrowse:Refresh()
+	ACTIVATE MSDIALOG oDlgTemp ON INIT EnchoiceBar(oDlgTemp,{||nOpca2 := 1,oDlgTemp:End()} ,{||nOpca2 := 2 ,oDlgTemp:End()}) CENTER
+
+	If nOpca2 == 2
+		aColsDados := {}
+	Else
+		aColsDados := AClone(oGetDados:aCols)
+	EndIf
+
+Return aColsDados
+
+Static Function fGetFiles(cPath)
+	Local j , k
+	Local aRet   := {}
+	Local aLista := {}
+
+	aLista := AClone(Directory(cPath+"\*.*","D"))
+
+	For j := 1 to Len(aLista)
+		If Len(aLista) > 0
+			If aLista[j,5] == "A" .AND. Substr(aLista[j,1],1,1) <> '.'
+				AADD(aRet,aLista[j])
+			elseIf !("."$aLista[j,1])
+				aAux := fGetFiles(cPath+aLista[j,1])
+				For k := 1 to Len(aAux)
+					AADD(aRet,aAux[k])
+				Next
+			EndIf
+		EndIf
+	Next
+
+Return aclone(aRet)
+
+Static Function ShowStr(cString)
+//----------------------------------------------------
+
+	@ 116,090 To 416,707 Dialog oDlgMemo Title "Visualiza SQL"
+	@ 001,005 Get cString   Size 300,120  MEMO                 Object oMemo
+
+	@ 130,240 Button OemToAnsi("_Fechar")   Size 35,14 Action Close(oDlgMemo)
+
+	Activate Dialog oDlgMemo CENTERED
+
+Return nil
+
+User Function fShowLog(cString)
+
+	oModal := FwDialogModal():New()
+
+	oModal:SetTitle( "Visualização de Log")
+	oModal:SetEscClose(.F.)
+
+	oModal:SetSize(170, 310)
+	oModal:CreateDialog()
+
+	oModal:EnableFormBar(.T.)
+	oModal:CreateFormBar()
+
+	oModal:AddButton('Sair'       , { || lProcessa := .F., oModal:DeActivate() }, 'Sair'     ,,.T.,.F.,.T.,)
+
+	@ 024,005 Get cString   Size 300,120  MEMO                 Object oModal:GetPanelMain()
+
+	oModal:Activate()
+
+Return nil

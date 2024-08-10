@@ -2,11 +2,24 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"name": "ng serve chrome",
+			"name": "ng serve chrome teste",
 			"type": "chrome",
 			"request": "launch",
 			"preLaunchTask": "npm: start",
-			"url": "http://localhost:4200/"
+			"url": "http://localhost:4200/",
+			"runtimeArgs": [
+				"--configuration=test"
+			  ]
+		},
+		{
+			"name": "ng serve chrome producao",
+			"type": "chrome",
+			"request": "launch",
+			"preLaunchTask": "npm: start",
+			"url": "http://localhost:4200/",
+			"runtimeArgs": [
+				"--configuration=prod"
+			  ]
 		},
 		{
 			"name": "ng test chrome",
@@ -32,5 +45,6 @@
 			"label": "SIGAMDI"
 		}
 	],
-	"lastProgramExecuted": "SIGAMDI"
+	"lastProgramExecuted": "<cancel>",
+	"lastProgramArguments": []
 }
